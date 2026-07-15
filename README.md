@@ -32,6 +32,24 @@
 
 Оригинал: [bailopan.net/cssdm](http://bailopan.net/cssdm/), исходники: [alliedmodders/cssdm](https://github.com/alliedmodders/cssdm).
 
+## CI
+
+GitHub Actions (как в [fmu1337/sourcemod-css34](https://github.com/fmu1337/sourcemod-css34)):
+
+| Workflow | Что делает |
+|----------|------------|
+| `Build` | Собирает `cssdm-*-css34-linux.tar.gz`, проверяет ELF/состав пакета |
+| `Test Server` | Поднимает CS:S v34 + rom4s MM/SM, ставит CSS:DM, smoke (`cssdm.ext` + плагины) и короткий **botplay** |
+
+Для bot-теста переиспользуются скрипты из `fmu1337/sourcemod-css34` (`testing/scripts`). Локально:
+
+```bash
+# после успешной сборки:
+export CSSDM_PACKAGE=$PWD/OUT/package/cssdm-2.1.6-git268-css34-linux.tar.gz
+export RECORD_SECS=120 INSTALL_SMAC=0
+testing/scripts/cssdm-bot-test.sh
+```
+
 ## Сборка
 
 Сабмодуль `cssdm` должен быть инициализирован:
@@ -40,33 +58,36 @@
 git submodule update --init --recursive
 ```
 
-Сборка рассчитана на CI (`.travis.yml`):
+Зависимости (Linux):
 
-- **Linux / Windows**
 - HL2SDK `episode1`
-- Metamod:Source `1.10-dev`
-- SourceMod `1.10-dev` + пребилды `sourcemod-*-css34-*`
-- AMBuild, Clang 9 (Linux)
+- Metamod:Source `1.10-dev` (исходники)
+- SourceMod `1.10-dev` (исходники) + пребилд `sourcemod-*-css34-*` (spcomp / bin)
+- AMBuild, `g++` multilib (`-m32`)
 
-Локально (Linux, после подготовки зависимостей как в CI):
+Пример:
 
 ```bash
+export DEPS_DIR=$HOME   # hl2sdk-episode1, mmsource, sourcemod, sourcemod-bin
+export CC=gcc CXX=g++
 builder/run/linux.sh
 ```
 
-Скрипт применяет патч из `builder/run/config.json` (ветка `2.1` → `1.patch`), конфигурирует и собирает пакет вида:
+Скрипт применяет патч из `builder/run/config.json` (ветка `2.1` → `1.patch`) и собирает:
 
-`cssdm-<version>-git<N>-css34-linux.tar.gz` / `…-windows.zip`
+`cssdm-<version>-git<N>-css34-linux.tar.gz`
 
-В пакет подставляется gamedata из `builder/patches/2.1/gamedata/` (сигнатуры/оффсеты под v34).
+В пакет подставляется gamedata из `builder/patches/2.1/gamedata/`.
 
 ## Структура репозитория
 
 ```
+.github/workflows/ # Build + Test Server (botplay)
 builder/
   patches/2.1/     # патчи и gamedata под ep1 / css34
   run/             # build.py, config.json, linux.sh, windows.bat
 cssdm/             # сабмодуль upstream CSS:DM
+testing/scripts/   # check/install/bot-test (smoke + botplay)
 ```
 
 ## Связанные проекты

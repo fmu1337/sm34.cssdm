@@ -1,5 +1,5 @@
 diff --git a/AMBuildScript b/AMBuildScript
-index 86a307d..d9a8025 100644
+index 86a307d..bef3d23 100644
 --- a/AMBuildScript
 +++ b/AMBuildScript
 @@ -9,11 +9,11 @@ class CSSDM:
@@ -34,7 +34,21 @@ index 86a307d..d9a8025 100644
  
  			#Must have a path for each envvar (file a bug if you don't like this)
  			for i in envvars:
-@@ -184,7 +183,7 @@ class CSSDM:
+@@ -79,6 +78,13 @@ class CSSDM:
+ 				self.compiler.AddToListVar('CXXFLAGS', '-Wno-non-virtual-dtor')
+ 				self.compiler.AddToListVar('CXXFLAGS', '-Wno-overloaded-virtual')
+ 				self.compiler.AddToListVar('CXXFLAGS', '-Wno-deprecated-register')
++				# Modern GCC (10+) warns aggressively; keep -Werror with scoped suppressions.
++				self.compiler.AddToListVar('CFLAGS', '-Wno-stringop-overflow')
++				self.compiler.AddToListVar('CFLAGS', '-Wno-array-bounds')
++				self.compiler.AddToListVar('CFLAGS', '-Wno-format-overflow')
++				self.compiler.AddToListVar('CFLAGS', '-Wno-restrict')
++				self.compiler.AddToListVar('CXXFLAGS', '-Wno-class-memaccess')
++				self.compiler.AddToListVar('CXXFLAGS', '-Wno-sized-deallocation')
+ 				self.compiler.AddToListVar('CXXFLAGS', '-std=c++11')
+ 				if (self.vendor == 'gcc' and cxx.majorVersion >= 4 and cxx.minorVersion >= 7) or \
+ 						(self.vendor == 'clang' and cxx.majorVersion >= 3):
+@@ -184,7 +190,7 @@ class CSSDM:
  			self.compiler.AddToListVar('RCINCLUDES', os.path.join(AMBuild.sourceFolder, 'public'))
  			self.compiler.AddToListVar('RCINCLUDES',
  			                           os.path.join(AMBuild.outputFolder, 'includes'))
@@ -43,7 +57,7 @@ index 86a307d..d9a8025 100644
  		self.mmsPath = AMBuild.cache['MMSOURCE110']
  		self.smSourcePath = AMBuild.cache['SOURCEMOD110']
  
-@@ -216,6 +215,9 @@ class CSSDM:
+@@ -216,6 +222,9 @@ class CSSDM:
  	def PreSetupHL2Job(self, job, builder, sdk):
  		info = self.sdkInfo[sdk]
  		sdkPath = AMBuild.cache[info['sdk']]
@@ -53,7 +67,7 @@ index 86a307d..d9a8025 100644
  		
  		if AMBuild.target['platform'] == 'linux':
  			if sdk == 'ep1':
-@@ -276,13 +278,16 @@ class CSSDM:
+@@ -276,13 +285,16 @@ class CSSDM:
  			if sdk == 'csgo':
  				builder.AddObjectFiles(['interfaces_i486.a'])
  

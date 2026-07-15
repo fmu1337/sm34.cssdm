@@ -2,7 +2,7 @@
 
 import os, sys
 import argparse, subprocess, requests, json
-import distutils.dir_util as dirutil
+import shutil
 from uritemplate import URITemplate
 
 requests.packages.urllib3.disable_warnings()
@@ -135,7 +135,8 @@ class CBuilder:
             self.env['HL2SDKEP1'] = args.hl2sdk_ep1
 
         conf_argv = ' '.join(conf_argv)
-        command = ('' if sys.platform.startswith('win') else 'CC={0} CXX={1} '.format(args.cc or self.config['CC'], args.cxx or self.config['CXX'])) + 'python {0} {1}'.format(os.path.join(self.source_dir, 'configure.py'), conf_argv)
+        py = sys.executable or 'python3'
+        command = ('' if sys.platform.startswith('win') else 'CC={0} CXX={1} '.format(args.cc or self.config['CC'], args.cxx or self.config['CXX'])) + '{0} {1} {2}'.format(py, os.path.join(self.source_dir, 'configure.py'), conf_argv)
 
         try:
             os.mkdir(self.OUT)
@@ -154,7 +155,8 @@ class CBuilder:
         print('[Build] Start')
 
         try:
-            subprocess.check_call('python build.py', shell=True, env=self.env)
+            py = sys.executable or 'python3'
+            subprocess.check_call('{0} build.py'.format(py), shell=True, env=self.env)
         except:
             raise Exception('[Build] Failed')
 
@@ -188,8 +190,9 @@ class CBuilder:
             gamedata_dir_out = os.path.join('addons', 'sourcemod', 'gamedata')
 
             print('[Package] Copying gamedata...')
-            dirutil.remove_tree(gamedata_dir_out)
-            dirutil.copy_tree(gamedata_dir_in, gamedata_dir_out, preserve_times=0)
+            if os.path.isdir(gamedata_dir_out):
+                shutil.rmtree(gamedata_dir_out)
+            shutil.copytree(gamedata_dir_in, gamedata_dir_out)
 
             for filename in gamedata_w:
                 try:
