@@ -52,6 +52,24 @@ class CBuilder:
         self.src_commit = int(subprocess.check_output('git rev-list --count HEAD', shell=True).decode().strip())
         self.src_revision = subprocess.check_output('git rev-parse HEAD', shell=True).decode().strip()
 
+        # Shallow submodule checkouts report a tiny rev-list count; allow override
+        # or fall back to the newest patch gate for this product branch.
+        if 'CSSDM_SRC_COMMIT' in os.environ:
+            self.src_commit = int(os.environ['CSSDM_SRC_COMMIT'])
+            print('[Init] Using CSSDM_SRC_COMMIT override: {0}'.format(self.src_commit))
+        else:
+            config_preview = os.path.join(self.script_dir, 'config.json')
+            try:
+                with open(config_preview, 'r') as hFile:
+                    preview = json.load(hFile).get(self.src_branch, {})
+                gates = [int(k) for k in preview.keys()]
+                if gates and self.src_commit < min(gates):
+                    print('[Init] Shallow cssdm history detected (rev-list={0}); using patch gate {1}'.format(
+                        self.src_commit, max(gates)))
+                    self.src_commit = max(gates)
+            except Exception:
+                pass
+
         os.chdir('..')
         try:
             self.build_commit = subprocess.check_output('git rev-parse HEAD', shell=True).decode().strip()

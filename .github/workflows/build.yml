@@ -16,6 +16,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
+
+      - name: Deepen cssdm submodule history
+        run: |
+          git -C cssdm fetch --unshallow 2>/dev/null || git -C cssdm fetch --depth=500 || true
+          echo "cssdm rev-list=$(git -C cssdm rev-list --count HEAD)"
+          echo "cssdm HEAD=$(git -C cssdm rev-parse --short HEAD)"
+          cat cssdm/product.version
 
       - name: Install build dependencies
         run: |
@@ -47,7 +55,6 @@ jobs:
 
       - name: Checkout build dependencies
         run: |
-          mkdir -p "$HOME"
           git clone --depth 1 -b episode1 https://github.com/alliedmodders/hl2sdk "$HOME/hl2sdk-episode1"
           git clone --depth 1 -b 1.10-dev https://github.com/alliedmodders/metamod-source "$HOME/mmsource"
           git clone --depth 1 -b 1.10-dev --recursive https://github.com/alliedmodders/sourcemod "$HOME/sourcemod"

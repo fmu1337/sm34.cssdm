@@ -25,6 +25,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
+
+      - name: Deepen cssdm submodule history
+        run: |
+          git -C cssdm fetch --unshallow 2>/dev/null || git -C cssdm fetch --depth=500 || true
+          echo "cssdm rev-list=$(git -C cssdm rev-list --count HEAD)"
 
       - name: Install build dependencies
         run: |
