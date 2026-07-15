@@ -19,6 +19,7 @@ if [[ -z "${CSSDM_PACKAGE}" || ! -f "${CSSDM_PACKAGE}" ]]; then
   echo "Set CSSDM_PACKAGE to a built cssdm-*-css34-linux.tar.gz" >&2
   exit 1
 fi
+CSSDM_PACKAGE="$(cd "$(dirname "${CSSDM_PACKAGE}")" && pwd)/$(basename "${CSSDM_PACKAGE}")"
 
 resolve_sm_css34() {
   if [[ -n "${SM_CSS34_ROOT}" && -d "${SM_CSS34_ROOT}/testing/scripts" ]]; then
