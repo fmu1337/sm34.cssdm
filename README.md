@@ -2,7 +2,7 @@
 
 Сборка [CS:S Deathmatch](https://github.com/alliedmodders/cssdm) (CSS:DM) под **CS:S v34** и SourceMod 1.10 с бинарниками для css34.
 
-Исходники берутся из сабмодуля [`alliedmodders/cssdm`](https://github.com/alliedmodders/cssdm), затем на них накладываются патчи из `builder/patches/` (SDK Episode One / Engine v34, API ConVar/CCommand эпохи ep1, gamedata, отключение CS:GO-таргетов).
+Исходники берутся из сабмодуля [`alliedmodders/cssdm`](https://github.com/alliedmodders/cssdm) (`2.1.6-dev`, tip `master`), затем на них накладываются патчи из `builder/patches/` (SDK Episode One / Engine v34, API ConVar/CCommand эпохи ep1, **v34 gamedata** из `builder/patches/2.1/gamedata/`, отключение CS:GO-таргетов). Upstream FFA-оффсеты для современного CS:S в пакет не попадают.
 
 ## Нужен ли этот проект для sourcemod-css34?
 
@@ -45,7 +45,7 @@ GitHub Actions (как в [fmu1337/sourcemod-css34](https://github.com/fmu1337/s
 
 ```bash
 # после успешной сборки:
-export CSSDM_PACKAGE=$PWD/OUT/package/cssdm-2.1.6-git268-css34-linux.tar.gz
+export CSSDM_PACKAGE=$PWD/OUT/package/cssdm-2.1.6-git270-css34-linux.tar.gz
 export RECORD_SECS=120 INSTALL_SMAC=0
 testing/scripts/cssdm-bot-test.sh
 ```
