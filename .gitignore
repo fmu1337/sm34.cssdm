@@ -1,0 +1,8 @@
+/OUT/
+/packages/
+/.venv/
+/.ci-server/
+/.ci-cache/
+/.ci-vendor/
+*.log
+__pycache__/

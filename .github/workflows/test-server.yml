@@ -1,0 +1,168 @@
+name: Test Server
+
+on:
+  push:
+    branches:
+      - master
+      - 'cursor/**'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      record_secs:
+        description: "Botplay recording length in seconds"
+        required: false
+        default: "180"
+
+concurrency:
+  group: test-server-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Deepen cssdm submodule history
+        run: |
+          git -C cssdm fetch --unshallow 2>/dev/null || git -C cssdm fetch --depth=500 || true
+          echo "cssdm rev-list=$(git -C cssdm rev-list --count HEAD)"
+
+      - name: Install build dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils curl g++-multilib gcc-multilib git \
+            lib32stdc++6 lib32z1-dev libc6-dev-i386 \
+            libstdc++-12-dev:i386 linux-libc-dev \
+            python3 python3-pip python3-venv zlib1g-dev:i386
+
+      - name: Set up Python tools
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip setuptools wheel
+          .venv/bin/pip install requests uritemplate discord-webhook
+          git clone --depth 1 https://github.com/alliedmodders/ambuild /tmp/ambuild
+          .venv/bin/pip install /tmp/ambuild
+
+      - name: Checkout build dependencies
+        run: |
+          git clone --depth 1 -b episode1 https://github.com/alliedmodders/hl2sdk "$HOME/hl2sdk-episode1"
+          git clone --depth 1 -b 1.10-dev https://github.com/alliedmodders/metamod-source "$HOME/mmsource"
+          git clone --depth 1 -b 1.10-dev --recursive https://github.com/alliedmodders/sourcemod "$HOME/sourcemod"
+          mkdir -p "$HOME/sourcemod-bin"
+          curl -fL --retry 5 -o /tmp/sm-bin.tgz \
+            https://github.com/rom4s/sourcemod-css34/releases/download/v1.11.0.6572/sourcemod-1.11.0-git6572-css34-linux.tar.gz
+          tar -xzf /tmp/sm-bin.tgz -C "$HOME/sourcemod-bin"
+
+      - name: Build CSS:DM
+        env:
+          VIRTUAL_ENV: ${{ github.workspace }}/.venv
+          CC: gcc
+          CXX: g++
+        run: |
+          chmod +x builder/run/linux.sh testing/scripts/*.sh
+          export PATH="${VIRTUAL_ENV}/bin:${PATH}"
+          export DEPS_DIR="${HOME}"
+          builder/run/linux.sh
+          mkdir -p packages
+          cp -f OUT/package/cssdm-*-css34-linux.tar.gz packages/
+
+      - name: Upload CSS:DM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: cssdm-css34-linux-for-test
+          path: packages/cssdm-*-css34-linux.tar.gz
+          if-no-files-found: error
+
+  check-package:
+    needs: [build-linux]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download CSS:DM package
+        uses: actions/download-artifact@v4
+        with:
+          name: cssdm-css34-linux-for-test
+          path: packages
+
+      - name: ABI / package checks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils
+          chmod +x testing/scripts/*.sh
+          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-linux.tar.gz | head -n1)"
+          export CSSDM_PACKAGE
+          testing/scripts/check-cssdm-package.sh
+
+  test-cssdm-botplay:
+    needs: [build-linux, check-package]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download CSS:DM package
+        uses: actions/download-artifact@v4
+        with:
+          name: cssdm-css34-linux-for-test
+          path: packages
+
+      - name: Checkout sourcemod-css34 testing harness
+        uses: actions/checkout@v4
+        with:
+          repository: fmu1337/sourcemod-css34
+          path: .ci-vendor/sourcemod-css34
+
+      - name: Install host 32-bit runtime + tools
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl expect git unzip unrar \
+            lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 \
+            libstdc++6:i386 zlib1g:i386
+
+      - name: CSS:DM smoke + botplay (rom4s SM/MM baseline)
+        env:
+          SERVER_DIR: ${{ github.workspace }}/.ci-server
+          CACHE_DIR: ${{ github.workspace }}/.ci-cache
+          SM_CSS34_ROOT: ${{ github.workspace }}/.ci-vendor/sourcemod-css34
+          RECORD_SECS: ${{ github.event.inputs.record_secs || '180' }}
+          RUN_BOTPLAY: "1"
+          APPLY_SRCDS_PATCH: "1"
+          APPLY_VALVE_RC: "1"
+          INSTALL_SMAC: "0"
+          MIN_SMAC_RUNNING: "0"
+          MIN_ROUND_START: "1"
+          MIN_ROUND_END: "1"
+          MIN_PLAYER_DEATH: "3"
+        run: |
+          chmod +x testing/scripts/*.sh .ci-vendor/sourcemod-css34/testing/scripts/*.sh
+          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-linux.tar.gz | head -n1)"
+          export CSSDM_PACKAGE
+          testing/scripts/cssdm-bot-test.sh
+
+      - name: Upload botplay / smoke logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cssdm-botplay-logs
+          path: |
+            .ci-server/cssdm-smoke.log
+            .ci-server/console-probe.log
+            .ci-server/botplay-run.log
+            .ci-server/botplay.log
+            .ci-server/cssdm-botplay-report.json
+            .ci-server/cssdm-botplay-report.txt
+            .ci-server/cstrike/console.log
+            .ci-server/cstrike/addons/sourcemod/logs/L*.log
+          if-no-files-found: ignore
+          retention-days: 7
