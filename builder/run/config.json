@@ -4,6 +4,11 @@
 			"CC": "gcc",
 			"CXX": "g++",
 			"patch": "1.patch"
+		},
+		"270": {
+			"CC": "gcc",
+			"CXX": "g++",
+			"patch": "1.patch"
 		}
 	}
 }
