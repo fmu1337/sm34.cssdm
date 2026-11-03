@@ -119,7 +119,7 @@ jobs:
         line: [sm11, sm13]
     env:
       CSSDM_SM_LINE: ${{ matrix.line }}
-      SM_RELEASE_TAG: 1.13.0.7478-mm1.12.0-r3
+      SM_RELEASE_TAG: 1.13.0.7478-mm1.12.0-r5
       # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
       # (also on master's build; the old checks never matched it). Warn there, fail on sm13.
       CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line == 'sm13' && '1' || '0' }}
