@@ -119,9 +119,9 @@ jobs:
         line: [sm11, sm12, sm13]
     env:
       CSSDM_SM_LINE: ${{ matrix.line }}
-      # css34 release packages under test (sm12/sm13); the harness comes from the SM 1.13 tag.
-      SM_RELEASE_TAG: ${{ matrix.line == 'sm12' && '1.12.0.7257-mm1.12.0-r4' || '1.13.0.7478-mm1.12.0-r5' }}
-      HARNESS_REF: 1.13.0.7478-mm1.12.0-r5
+      # sm12/sm13 test the packages that line-sm12-latest / line-sm13-latest point at
+      # (builder/run/css34_line.py); the harness is the fork at the line-sm13-latest tag.
+      HARNESS_REF: line-sm13-latest
       # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
       # (also on master's build; the old checks never matched it). Warn there, fail on sm12/sm13.
       CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line != 'sm11' && '1' || '0' }}
@@ -139,7 +139,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fmu1337/sourcemod-css34
-          # The harness as of the SM 1.13 r5 release; it also drives the sm11 and sm12 runs.
+          # The harness at the SM 1.13 pointer; it also drives the sm11 and sm12 runs.
           ref: ${{ env.HARNESS_REF }}
           path: .ci-vendor/sourcemod-css34
 

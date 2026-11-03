@@ -2,22 +2,12 @@
 # Fetch hl2sdk-episode1, Metamod:Source, SourceMod sources and a SourceMod package
 # (for spcomp) into DEPS_DIR for the CSSDM_SM_LINE build.
 #   sm11: SM/MM 1.10-dev sources, rom4s SM 1.11.0.6572 package (1.ep1 + 2.ep1).
-#   sm12: fmu1337/sourcemod-css34 sm12-latest pins (builder/lines.json SM_LATEST / MM_112)
-#         and the matching release package (2.ep1 only).
-#   sm13: fmu1337/sourcemod-css34 sm13-latest pins (builder/lines.json SM_LATEST_13 / MM_112)
-#         and the matching release package (2.ep1 only).
+#   sm12, sm13: whatever fmu1337/sourcemod-css34 line-sm12-latest / line-sm13-latest point at:
+#         its SourceMod / Metamod commits and its SourceMod package (2.ep1 only); see css34_line.py.
 set -euo pipefail
 
 DEPS_DIR="${DEPS_DIR:-${HOME}}"
 CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
-SM12_SM_COMMIT="${SM12_SM_COMMIT:-e68dada2979eb3093d81d2e3766f741e7d431e4a}"
-SM12_MM_COMMIT="${SM12_MM_COMMIT:-4e031eb571f5978eea8207b5d915c9cd0e8d6c58}"
-SM12_RELEASE_TAG="${SM12_RELEASE_TAG:-1.12.0.7257-mm1.12.0-r4}"
-SM12_SM_PACKAGE="${SM12_SM_PACKAGE:-sourcemod-1.12.0-git7257-css34-linux.tar.gz}"
-SM13_SM_COMMIT="${SM13_SM_COMMIT:-b34de51b8c7f92fc2a7242fc0195e2d64a69cefd}"
-SM13_MM_COMMIT="${SM13_MM_COMMIT:-4e031eb571f5978eea8207b5d915c9cd0e8d6c58}"
-SM13_RELEASE_TAG="${SM13_RELEASE_TAG:-1.13.0.7478-mm1.12.0-r5}"
-SM13_SM_PACKAGE="${SM13_SM_PACKAGE:-sourcemod-1.13.0-git7478-css34-linux.tar.gz}"
 
 fetch_commit() {
   local url="$1" dir="$2" commit="$3"
@@ -40,18 +30,12 @@ case "${CSSDM_SM_LINE}" in
       https://github.com/rom4s/sourcemod-css34/releases/download/v1.11.0.6572/sourcemod-1.11.0-git6572-css34-linux.tar.gz
     ;;
   sm12|sm13)
-    pfx="${CSSDM_SM_LINE^^}"
-    sm_commit_var="${pfx}_SM_COMMIT" mm_commit_var="${pfx}_MM_COMMIT"
-    tag_var="${pfx}_RELEASE_TAG" pkg_var="${pfx}_SM_PACKAGE"
-    sm_pkg="${!pkg_var}"
-    fetch_commit https://github.com/alliedmodders/metamod-source "${DEPS_DIR}/mmsource" "${!mm_commit_var}"
-    fetch_commit https://github.com/alliedmodders/sourcemod "${DEPS_DIR}/sourcemod" "${!sm_commit_var}"
+    eval "$(python3 "$(dirname "$0")/css34_line.py" "${CSSDM_SM_LINE}" "${TMP}/css34" sourcemod)"
+    fetch_commit https://github.com/alliedmodders/metamod-source "${DEPS_DIR}/mmsource" "${CSS34_MM_COMMIT}"
+    fetch_commit https://github.com/alliedmodders/sourcemod "${DEPS_DIR}/sourcemod" "${CSS34_SM_COMMIT}"
     git -C "${DEPS_DIR}/sourcemod" submodule update --init --recursive --depth 1
-    rel="https://github.com/fmu1337/sourcemod-css34/releases/download/${!tag_var}"
-    curl -fL --retry 5 -o "${TMP}/${sm_pkg}" "${rel}/${sm_pkg}"
-    curl -fL --retry 5 -o "${TMP}/SHA256SUMS.linux" "${rel}/SHA256SUMS.linux"
-    (cd "${TMP}" && grep -F "  ${sm_pkg}" SHA256SUMS.linux | sha256sum -c -)
-    mv "${TMP}/${sm_pkg}" "${TMP}/sm-bin.tgz"
+    cp "${TMP}/css34/lines.json" "${DEPS_DIR}/css34-lines.json"
+    mv "${CSS34_SOURCEMOD}" "${TMP}/sm-bin.tgz"
     ;;
   *)
     echo "Unknown CSSDM_SM_LINE=${CSSDM_SM_LINE} (use sm11, sm12 or sm13)" >&2

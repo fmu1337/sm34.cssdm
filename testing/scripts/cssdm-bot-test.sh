@@ -11,11 +11,9 @@ RECORD_SECS="${RECORD_SECS:-180}"
 RUN_BOTPLAY="${RUN_BOTPLAY:-1}"
 APPLY_SRCDS_PATCH="${APPLY_SRCDS_PATCH:-1}"
 APPLY_VALVE_RC="${APPLY_VALVE_RC:-1}"
-# sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm12, sm13: fmu1337/sourcemod-css34 release
-# packages (SM_RELEASE_TAG).
+# sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm12, sm13: the packages that
+# fmu1337/sourcemod-css34 line-sm12-latest / line-sm13-latest point at (builder/run/css34_line.py).
 CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
-SM_RELEASE_TAG="${SM_RELEASE_TAG:-1.13.0.7478-mm1.12.0-r5}"
-SM_RELEASE_REPO="${SM_RELEASE_REPO:-fmu1337/sourcemod-css34}"
 # 1: the smoke fails unless cssdm.ext and the DM plugins are running.
 CSSDM_REQUIRE_EXT_LOAD="${CSSDM_REQUIRE_EXT_LOAD:-1}"
 
@@ -77,22 +75,15 @@ case "${CSSDM_SM_LINE}" in
     DEFAULT_SM_VERSION_EXPECT="1.11.0.6572"
     ;;
   sm12|sm13)
-    # Install the css34 SM 1.13 / MM 1.12 release packages (checksum-verified), then CSS:DM.
-    rel_dir="${CACHE_DIR}/${SM_RELEASE_TAG}"
-    rel_url="https://github.com/${SM_RELEASE_REPO}/releases/download/${SM_RELEASE_TAG}"
-    mkdir -p "${rel_dir}"
-    curl -fsSL --retry 5 --retry-delay 3 -o "${rel_dir}/SHA256SUMS.linux" "${rel_url}/SHA256SUMS.linux"
-    MM_PACKAGE="${rel_dir}/$(awk '$2 ~ /^mmsource-.*-linux\.tar\.gz$/ { print $2; exit }' "${rel_dir}/SHA256SUMS.linux")"
-    SM_PACKAGE="${rel_dir}/$(awk '$2 ~ /^sourcemod-.*-linux\.tar\.gz$/ { print $2; exit }' "${rel_dir}/SHA256SUMS.linux")"
-    for pkg in "${MM_PACKAGE}" "${SM_PACKAGE}"; do
-      [[ -s "${pkg}" ]] || curl -fL --retry 5 --retry-delay 3 -o "${pkg}" "${rel_url}/$(basename "${pkg}")"
-    done
-    (cd "${rel_dir}" && sha256sum -c SHA256SUMS.linux)
+    # Install the MM + SM packages of the line's css34 pointer release (checksum-verified),
+    # then CSS:DM.
+    eval "$(python3 "${ROOT}/builder/run/css34_line.py" "${CSSDM_SM_LINE}" \
+      "${CACHE_DIR}/line-${CSSDM_SM_LINE}" sourcemod mmsource)"
+    MM_PACKAGE="${CSS34_MMSOURCE}" SM_PACKAGE="${CSS34_SOURCEMOD}"
     export BOTPLAY_PROFILE=release MM_PACKAGE SM_PACKAGE
     unset USE_BUILT_MM BUILT_MM_DIR BUILT_MM_PACKAGE || true
-    # 1.13.0.7478-mm1.12.0-r5 -> SM 1.13.0.7478, MM 1.12.0
-    DEFAULT_SM_VERSION_EXPECT="${SM_RELEASE_TAG%%-mm*}"
-    DEFAULT_MM_VERSION_EXPECT="$(sed -E 's/^.*-mm([0-9.]+)(-.*)?$/\1/' <<<"${SM_RELEASE_TAG}")"
+    DEFAULT_SM_VERSION_EXPECT="${CSS34_SM_VERSION}"
+    DEFAULT_MM_VERSION_EXPECT="${CSS34_MM_VERSION}"
     ;;
   *)
     echo "Unknown CSSDM_SM_LINE=${CSSDM_SM_LINE} (use sm11, sm12 or sm13)" >&2
