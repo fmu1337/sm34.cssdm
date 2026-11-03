@@ -166,11 +166,11 @@ require_grep "${CONSOLE_PROBE_LOG}" 'cssdm\.ext' "cssdm.ext listed"
 require_grep "${CONSOLE_PROBE_LOG}" 'dm_basics' "dm_basics plugin listed"
 require_grep "${CONSOLE_PROBE_LOG}" 'dm_equipment' "dm_equipment plugin listed"
 
-if grep -Eiq 'cssdm\.ext.*<FAILED>|cssdm\.ext.*error|Unable to load extension "cssdm\.ext"|Extension version is too (old|new)' "${CONSOLE_PROBE_LOG}"; then
+if grep -Eiq '<FAILED> file "cssdm\.ext|cssdm\.ext.*<FAILED>|cssdm\.ext.*error|Unable to load extension "cssdm\.ext"|Extension version is too (old|new)' "${CONSOLE_PROBE_LOG}"; then
   echo "FAIL: cssdm.ext failed to load" >&2
   fail=1
 fi
-if grep -Eiq 'dm_basics.*<Failed>|dm_equipment.*<Failed>' "${CONSOLE_PROBE_LOG}"; then
+if grep -Eiq 'dm_basics.*<Failed>|dm_equipment.*<Failed>|<Failed> "CS:S DM' "${CONSOLE_PROBE_LOG}"; then
   echo "FAIL: CSS:DM plugin failed" >&2
   fail=1
 fi
