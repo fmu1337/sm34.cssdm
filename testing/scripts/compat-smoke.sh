@@ -7,17 +7,19 @@
 #   SM_ID, SM_LABEL build id/label from testing/compat/sm-builds.json
 #   SM_PACKAGE      SourceMod archive (.tar.gz or .zip; may also contain Metamod)
 #   MM_PACKAGE      Metamod archive (optional when SM_PACKAGE ships Metamod)
-#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena19, myarena111)
+#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena19, myarena111; "none" = SM alone)
 #   CSSDM_PACKAGE   cssdm-*-css34-*linux.tar.gz (plugins, gamedata, cfg, extension)
 #   CSSDM_EXT       optional cssdm.ext.2.ep1.so that replaces the package's extensions
 #   CSSDM_GAMEDATA  optional cssdm.games.txt that replaces the package's gamedata
 #   RESULTS         JSON lines file; OUT_DIR keeps the console log per cell
 #   BOT_SECS        bot play length (default 90)
 #   SRCDS_PREFIX    command prefix for srcds, e.g. FEX on ARM (passed to compat-run.py)
+#   COMPAT_RUNNER   recorded with the result (e.g. "fex"); the table marks such cells
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-: "${SERVER_DIR:?}" "${SM_ID:?}" "${SM_PACKAGE:?}" "${CSSDM_ID:?}" "${CSSDM_PACKAGE:?}" "${RESULTS:?}"
+: "${SERVER_DIR:?}" "${SM_ID:?}" "${SM_PACKAGE:?}" "${CSSDM_ID:?}" "${RESULTS:?}"
+[[ "${CSSDM_ID}" == none ]] || : "${CSSDM_PACKAGE:?}"
 SM_LABEL="${SM_LABEL:-${SM_ID}}"
 MM_PACKAGE="${MM_PACKAGE:-}"
 CSSDM_EXT="${CSSDM_EXT:-}"
@@ -50,16 +52,18 @@ fi
 sed -i 's/"AutoUpdate"[[:space:]]*"yes"/"AutoUpdate"\t\t"no"/' \
   "${cs}/addons/sourcemod/configs/core.cfg" 2>/dev/null || true
 
-# CSS:DM from the package; an SM package's own cssdm.ext (MyArena 1.9) is replaced too.
-rm -f "${cs}"/addons/sourcemod/extensions/cssdm.ext.*.so
-tar -xzf "${CSSDM_PACKAGE}" -C "${cs}"
-if [[ -n "${CSSDM_EXT}" ]]; then
-  rm -f "${cs}"/addons/sourcemod/extensions/cssdm.ext.*.so
-  cp -f "${CSSDM_EXT}" "${cs}/addons/sourcemod/extensions/cssdm.ext.2.ep1.so"
+# CSS:DM from the package; an SM package's own cssdm.ext (MyArena) is removed or replaced too.
+rm -f "${cs}"/addons/sourcemod/extensions/cssdm.ext.*.so "${cs}"/addons/sourcemod/gamedata/cssdm.games.txt
+if [[ "${CSSDM_ID}" != none ]]; then
+  tar -xzf "${CSSDM_PACKAGE}" -C "${cs}"
+  if [[ -n "${CSSDM_EXT}" ]]; then
+    rm -f "${cs}"/addons/sourcemod/extensions/cssdm.ext.*.so
+    cp -f "${CSSDM_EXT}" "${cs}/addons/sourcemod/extensions/cssdm.ext.2.ep1.so"
+  fi
+  [[ -n "${CSSDM_GAMEDATA}" ]] && cp -f "${CSSDM_GAMEDATA}" "${cs}/addons/sourcemod/gamedata/cssdm.games.txt"
+  touch "${cs}/addons/sourcemod/extensions/cssdm.autoload"
+  sed -i 's/^cssdm_enabled[[:space:]]*".*"/cssdm_enabled "1"/' "${cs}/cfg/cssdm/cssdm.cfg" 2>/dev/null || true
 fi
-[[ -n "${CSSDM_GAMEDATA}" ]] && cp -f "${CSSDM_GAMEDATA}" "${cs}/addons/sourcemod/gamedata/cssdm.games.txt"
-touch "${cs}/addons/sourcemod/extensions/cssdm.autoload"
-sed -i 's/^cssdm_enabled[[:space:]]*".*"/cssdm_enabled "1"/' "${cs}/cfg/cssdm/cssdm.cfg" 2>/dev/null || true
 
 set +e
 SERVER_DIR="${SERVER_DIR}" COMPAT_LOG="${console_log}" MAPS_FILE="${maps_file}" \
@@ -71,5 +75,5 @@ cat "${OUT_DIR}/${cell}.runner.txt"
 python3 "${ROOT}/testing/scripts/compat-table.py" parse \
   --sm-id "${SM_ID}" --sm-label "${SM_LABEL}" --cssdm-id "${CSSDM_ID}" \
   --console "${console_log}" --maps "${maps_file}" --runner-out "${OUT_DIR}/${cell}.runner.txt" \
-  --rc "${rc}" --logs-dir "${cs}/logs" >>"${RESULTS}"
+  --rc "${rc}" --logs-dir "${cs}/logs" --runner "${COMPAT_RUNNER:-}" >>"${RESULTS}"
 tail -n1 "${RESULTS}"

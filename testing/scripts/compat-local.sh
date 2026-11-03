@@ -9,7 +9,7 @@
 #               myarena111-cssdm.ext.2.ep1.so + myarena111-cssdm.games.txt;
 #               downloaded MM/SM archives are cached here
 #   BUILDS      build ids to run (default: all whose archives are available)
-#   CSSDM       variants to run (default: sm11 sm12 sm13 and the MyArena ones present)
+#   CSSDM       variants to run (default: none, the sm11/sm12/sm13 packages present and the MyArena ones)
 #   RESULTS     JSON lines file (default: $PKG_DIR/../out/local.jsonl)
 set -euo pipefail
 
@@ -19,7 +19,8 @@ RESULTS="${RESULTS:-$(dirname "${PKG_DIR}")/out/local.jsonl}"
 mkdir -p "$(dirname "${RESULTS}")"
 
 if [[ -z "${CSSDM:-}" ]]; then
-  CSSDM="sm11 sm12 sm13"
+  CSSDM="none"
+  for v in sm11 sm12 sm13; do [[ -f "${PKG_DIR}/${v}.tar.gz" ]] && CSSDM+=" ${v}"; done
   [[ -f "${PKG_DIR}/myarena19-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena19"
   [[ -f "${PKG_DIR}/myarena111-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena111"
 fi

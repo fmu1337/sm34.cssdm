@@ -12,8 +12,9 @@ import re
 import sys
 
 DM_PLUGINS = 5
-CSSDM_ORDER = ['sm11', 'sm12', 'sm13', 'myarena19', 'myarena111']
+CSSDM_ORDER = ['none', 'sm11', 'sm12', 'sm13', 'myarena19', 'myarena111']
 CSSDM_TITLES = {
+    'none': 'no cssdm (SM itself)',
     'sm11': 'cssdm sm11 (API 8, 1.ep1+2.ep1)',
     'sm12': 'cssdm sm12 (API 8, 2.ep1)',
     'sm13': 'cssdm sm13 (API 11, 2.ep1)',
@@ -42,7 +43,8 @@ def parse(args):
     expect_out = open(args.runner_out, encoding='utf-8', errors='replace').read() if os.path.isfile(args.runner_out) else ''
     mapped = open(args.maps).read().split() if os.path.isfile(args.maps) else []
 
-    r = {'sm_id': args.sm_id, 'sm_label': args.sm_label, 'cssdm_id': args.cssdm_id, 'rc': args.rc}
+    r = {'sm_id': args.sm_id, 'sm_label': args.sm_label, 'cssdm_id': args.cssdm_id, 'rc': args.rc,
+         'runner': args.runner}
     m = re.search(r'Metamod:Source [Vv]ersion:? (\d\S*)', text)
     r['mm_version'] = m.group(1) if m else None
     m = re.search(r'SourceMod Version: (\S+)', text)
@@ -88,13 +90,31 @@ def parse(args):
     print(json.dumps(r, ensure_ascii=False))
 
 
+def short_error(err):
+    """cssdm.ext load error without absolute paths; a missing 1.ep1 binary named as such."""
+    name, _, why = err.partition(': ')
+    if name == 'cssdm.ext.so' and 'cannot open shared object file' in why:
+        return 'no binary for the 1.ep1 core'
+    why = re.sub(r'/\S*/', '', why)
+    return '`%s: %s`' % (name, why.replace('|', '/')[:90])
+
+
 def cell(r):
+    tag = ' (FEX)' if r.get('runner') == 'fex' else ''
+    return base_cell(r) + tag
+
+
+def base_cell(r):
     if not r['map_loaded']:
         return 'server did not start'
+    if r['cssdm_id'] == 'none':
+        if r['crashed']:
+            return '**crash** (%s)' % (r.get('crash_note') or 'no clean exit')
+        return 'runs, %d kills' % r['kills']
     if r['crashed'] and r['cssdm'] != 'loaded':
-        return 'crash (%s)' % (r.get('crash_note') or 'no clean exit')
+        return '**crash** (%s)' % (r.get('crash_note') or 'no clean exit')
     if r['cssdm'] == 'failed':
-        return 'no: `%s`' % r['cssdm_error'].replace('|', '/')[:90]
+        return 'no: ' + short_error(r['cssdm_error'])
     if r['cssdm'] == 'missing':
         return 'no: cssdm.ext not listed'
     parts = [r.get('cssdm_file') or 'loaded', 'plugins %d/%d' % (r['dm_running'], DM_PLUGINS),
@@ -126,7 +146,8 @@ def table(args):
     out = ['| Source | Build | MM / SM seen | SM core |' + ''.join(' %s |' % CSSDM_TITLES.get(c, c) for c in present),
            '|---|---|---|---|' + '---|' * len(present)]
     for sm_id in sorted(set(r['sm_id'] for r in rows), key=lambda x: order.get(x, 99)):
-        any_r = next(r for r in rows if r['sm_id'] == sm_id)
+        mine = [r for r in rows if r['sm_id'] == sm_id]
+        any_r = next((r for r in mine if r.get('sm_version')), mine[0])
         cores = sorted(set(by[(sm_id, c)]['sm_core'] for c in present if (sm_id, c) in by and by[(sm_id, c)]['sm_core']))
         seen = '%s / %s' % (any_r.get('mm_version') or '?', any_r.get('sm_version') or '?')
         line = '| %s | %s | %s | %s |' % (groups.get(sm_id, '?'), any_r['sm_label'], seen, ', '.join(cores) or '?')
@@ -143,6 +164,7 @@ def main():
     for a in ('--sm-id', '--sm-label', '--cssdm-id', '--console', '--maps', '--runner-out', '--logs-dir'):
         p.add_argument(a, default='')
     p.add_argument('--rc', type=int, default=0)
+    p.add_argument('--runner', default='')
     t = sub.add_parser('table')
     t.add_argument('--builds', required=True)
     t.add_argument('results', nargs='+')

@@ -25,6 +25,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: compat-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   HARNESS_REF: 1.13.0.7478-mm1.12.0-r5
 
@@ -57,14 +61,17 @@ jobs:
               --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
           fi
           echo "CSS:DM packages from Build run ${RUN_ID}"
-          gh run download "${RUN_ID}" -R "${GITHUB_REPOSITORY}" -D dl \
-            -n cssdm-css34-linux -n cssdm-css34-sm12-linux -n cssdm-css34-sm13-linux
           mkdir -p cssdm-packages
-          cp dl/cssdm-css34-linux/cssdm-*-css34-linux.tar.gz cssdm-packages/sm11.tar.gz
-          cp dl/cssdm-css34-sm12-linux/cssdm-*-css34-sm12-linux.tar.gz cssdm-packages/sm12.tar.gz
-          cp dl/cssdm-css34-sm13-linux/cssdm-*-css34-sm13-linux.tar.gz cssdm-packages/sm13.tar.gz
+          # Lines a Build run may produce; take whichever artifacts it has.
+          for pair in sm11:cssdm-css34-linux sm12:cssdm-css34-sm12-linux sm13:cssdm-css34-sm13-linux; do
+            v="${pair%%:*}" name="${pair#*:}"
+            if gh run download "${RUN_ID}" -R "${GITHUB_REPOSITORY}" -D "dl/${name}" -n "${name}"; then
+              cp dl/"${name}"/cssdm-*.tar.gz "cssdm-packages/${v}.tar.gz"
+              echo "${v}" >>cssdm-packages/variants.txt
+            fi
+          done
           echo "${RUN_ID}" >cssdm-packages/build-run-id.txt
-          ls -l cssdm-packages
+          ls -l cssdm-packages; cat cssdm-packages/variants.txt
 
       - uses: actions/upload-artifact@v4
         with:
@@ -140,7 +147,8 @@ jobs:
         run: |
           export MM_PACKAGE="$PWD/.ci-addons/mm-$(basename "$MM_URL")"
           export SM_PACKAGE="$PWD/.ci-addons/sm-$(basename "$SM_URL")"
-          for v in sm11 sm12 sm13; do
+          # "none" = the SM build without CSS:DM, the baseline for every other cell.
+          for v in none $(cat cssdm-packages/variants.txt); do
             CSSDM_ID="$v" CSSDM_PACKAGE="$PWD/cssdm-packages/$v.tar.gz" testing/scripts/compat-smoke.sh
           done
 
