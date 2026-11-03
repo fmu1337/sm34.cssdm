@@ -20,6 +20,9 @@ jobs:
           - line: sm11
             artifact: cssdm-css34-linux
           # SM 1.13 / MM 1.12 (2.ep1 only): fmu1337/sourcemod-css34 line sm13-latest.
+          # SM 1.12 / MM 1.12 (2.ep1 only): fmu1337/sourcemod-css34 line sm12-latest.
+          - line: sm12
+            artifact: cssdm-css34-sm12-linux
           - line: sm13
             artifact: cssdm-css34-sm13-linux
     env:
