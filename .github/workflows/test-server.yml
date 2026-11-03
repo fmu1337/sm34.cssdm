@@ -120,8 +120,7 @@ jobs:
     env:
       CSSDM_SM_LINE: ${{ matrix.line }}
       # sm12/sm13 test the packages that line-sm12-latest / line-sm13-latest point at
-      # (builder/run/css34_line.py); the harness is the fork at the line-sm13-latest tag.
-      HARNESS_REF: line-sm13-latest
+      # (builder/run/css34_line.py).
       # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
       # (also on master's build; the old checks never matched it). Warn there, fail on sm12/sm13.
       CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line != 'sm11' && '1' || '0' }}
@@ -135,12 +134,19 @@ jobs:
           name: cssdm-css34-linux-for-test-${{ matrix.line }}
           path: packages
 
+      # The pointer's git tag is not moved with the release, so the harness comes from the
+      # release tag named in line-sm13-latest's lines.json. It also drives sm11 and sm12.
+      - name: Resolve harness tag
+        id: harness
+        run: |
+          eval "$(python3 builder/run/css34_line.py sm13 .ci-css34-harness)"
+          echo "ref=${CSS34_TAG}" >>"$GITHUB_OUTPUT"
+
       - name: Checkout sourcemod-css34 testing harness
         uses: actions/checkout@v4
         with:
           repository: fmu1337/sourcemod-css34
-          # The harness at the SM 1.13 pointer; it also drives the sm11 and sm12 runs.
-          ref: ${{ env.HARNESS_REF }}
+          ref: ${{ steps.harness.outputs.ref }}
           path: .ci-vendor/sourcemod-css34
 
       - name: Install host 32-bit runtime + tools
