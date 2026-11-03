@@ -1,5 +1,5 @@
 diff --git a/AMBuildScript b/AMBuildScript
-index bef3d23..252c8c2 100644
+index bef3d23..fd236c2 100644
 --- a/AMBuildScript
 +++ b/AMBuildScript
 @@ -10,8 +10,7 @@ class CSSDM:
@@ -23,3 +23,13 @@ index bef3d23..252c8c2 100644
  				if (self.vendor == 'gcc' and cxx.majorVersion >= 4 and cxx.minorVersion >= 7) or \
  						(self.vendor == 'clang' and cxx.majorVersion >= 3):
  					self.compiler.AddToListVar('CXXFLAGS', '-Wno-delete-non-virtual-dtor')
+@@ -317,7 +318,8 @@ class CSSDM:
+ 			paths.append(['game', 'server'])
+ 			paths.append(['common'])
+ 
+-		info = self.sdkInfo[sdk]
++		# 'ep1' is normalized from 'ep1_plapi' above and has no sdkInfo entry of its own here.
++		info = sdk_full or self.sdkInfo[sdk]
+ 		sdkPath = AMBuild.cache[info['sdk']]
+ 
+ 		compiler['CDEFINES'].append('SOURCE_ENGINE=' + info['def'])
