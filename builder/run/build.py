@@ -17,8 +17,10 @@ args.add_argument('--sm-bin-path', type=str)
 args.add_argument('--hl2sdk-ep1', type=str)
 args.add_argument('--no-update-script', type=str)
 # SourceMod line the build targets. 'sm11' is the original 1.10/1.11 build;
-# other lines apply builder/patches/<line>/<branch>/*.patch on top of the base patch.
+# other lines apply builder/patches/<LINE_PATCHES[line]>/<branch>/*.patch on top of the base patch.
 args.add_argument('--sm-line', type=str, default=os.environ.get('CSSDM_SM_LINE', 'sm11'))
+# SM 1.12 and 1.13 both build against Metamod 1.12 (no core-legacy) with modern SM headers.
+LINE_PATCHES = {'sm12': 'mm112', 'sm13': 'mm112'}
 args = args.parse_args()
 
 class CBuilder:
@@ -135,12 +137,15 @@ class CBuilder:
             raise Exception('[Patch] Failed to patching')
 
         if self.args.sm_line != 'sm11':
-            line_dir = os.path.join(self.patches_dir, self.args.sm_line, self.src_branch)
+            if self.args.sm_line not in LINE_PATCHES:
+                raise Exception('[Patch] Unknown line <{0}>'.format(self.args.sm_line))
+            patch_set = LINE_PATCHES[self.args.sm_line]
+            line_dir = os.path.join(self.patches_dir, patch_set, self.src_branch)
             line_patches = sorted(f for f in os.listdir(line_dir) if f.endswith('.patch')) if os.path.isdir(line_dir) else []
             if not line_patches:
                 raise Exception('[Patch] No patches for line <{0}> in {1}'.format(self.args.sm_line, line_dir))
             for name in line_patches:
-                print('[Patch] Applying {0}/{1}/{2}'.format(self.args.sm_line, self.src_branch, name))
+                print('[Patch] Applying {0}/{1}/{2}'.format(patch_set, self.src_branch, name))
                 try:
                     subprocess.check_call('git apply --ignore-space-change --ignore-whitespace {0}'.format(os.path.join(line_dir, name)), shell=True)
                 except:
