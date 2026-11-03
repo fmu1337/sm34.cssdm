@@ -10,7 +10,20 @@ on:
 
 jobs:
   linux:
+    name: linux (${{ matrix.line }})
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # SM 1.10 headers / MM 1.10 (1.ep1 + 2.ep1): servers that stay on SourceMod 1.11.
+          - line: sm11
+            artifact: cssdm-css34-linux
+          # SM 1.13 / MM 1.12 (2.ep1 only): fmu1337/sourcemod-css34 line sm13-latest.
+          - line: sm13
+            artifact: cssdm-css34-sm13-linux
+    env:
+      CSSDM_SM_LINE: ${{ matrix.line }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,14 +67,7 @@ jobs:
           .venv/bin/pip install /tmp/ambuild
 
       - name: Checkout build dependencies
-        run: |
-          git clone --depth 1 -b episode1 https://github.com/alliedmodders/hl2sdk "$HOME/hl2sdk-episode1"
-          git clone --depth 1 -b 1.10-dev https://github.com/alliedmodders/metamod-source "$HOME/mmsource"
-          git clone --depth 1 -b 1.10-dev --recursive https://github.com/alliedmodders/sourcemod "$HOME/sourcemod"
-          mkdir -p "$HOME/sourcemod-bin"
-          curl -fL --retry 5 -o /tmp/sm-bin.tgz \
-            https://github.com/rom4s/sourcemod-css34/releases/download/v1.11.0.6572/sourcemod-1.11.0-git6572-css34-linux.tar.gz
-          tar -xzf /tmp/sm-bin.tgz -C "$HOME/sourcemod-bin"
+        run: DEPS_DIR="$HOME" bash builder/run/checkout-deps.sh
 
       - name: Build CSS:DM for CS:S v34
         env:
@@ -74,18 +80,18 @@ jobs:
           export DEPS_DIR="${HOME}"
           builder/run/linux.sh
           mkdir -p packages
-          cp -f OUT/package/cssdm-*-css34-linux.tar.gz packages/
+          cp -f OUT/package/cssdm-*-css34-*linux.tar.gz packages/
           ls -lh packages/
 
       - name: Check package
         run: |
-          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-linux.tar.gz | head -n1)"
+          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-*linux.tar.gz | head -n1)"
           export CSSDM_PACKAGE
           testing/scripts/check-cssdm-package.sh
 
       - name: Upload CSS:DM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cssdm-css34-linux
-          path: packages/cssdm-*-css34-linux.tar.gz
+          name: ${{ matrix.artifact }}
+          path: packages/cssdm-*-css34-*linux.tar.gz
           if-no-files-found: error

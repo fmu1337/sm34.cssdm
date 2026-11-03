@@ -16,6 +16,9 @@ args.add_argument('--sm-path', type=str)
 args.add_argument('--sm-bin-path', type=str)
 args.add_argument('--hl2sdk-ep1', type=str)
 args.add_argument('--no-update-script', type=str)
+# SourceMod line the build targets. 'sm11' is the original 1.10/1.11 build;
+# other lines apply builder/patches/<line>/<branch>/*.patch on top of the base patch.
+args.add_argument('--sm-line', type=str, default=os.environ.get('CSSDM_SM_LINE', 'sm11'))
 args = args.parse_args()
 
 class CBuilder:
@@ -131,6 +134,18 @@ class CBuilder:
         except:
             raise Exception('[Patch] Failed to patching')
 
+        if self.args.sm_line != 'sm11':
+            line_dir = os.path.join(self.patches_dir, self.args.sm_line, self.src_branch)
+            line_patches = sorted(f for f in os.listdir(line_dir) if f.endswith('.patch')) if os.path.isdir(line_dir) else []
+            if not line_patches:
+                raise Exception('[Patch] No patches for line <{0}> in {1}'.format(self.args.sm_line, line_dir))
+            for name in line_patches:
+                print('[Patch] Applying {0}/{1}/{2}'.format(self.args.sm_line, self.src_branch, name))
+                try:
+                    subprocess.check_call('git apply --ignore-space-change --ignore-whitespace {0}'.format(os.path.join(line_dir, name)), shell=True)
+                except:
+                    raise Exception('[Patch] Failed to apply {0}'.format(name))
+
         print('[Patch] Successfully patched')
 
     def bootstrap(self):
@@ -219,6 +234,8 @@ class CBuilder:
                     pass
 
         output = 'cssdm-{0}-git{1}-css34-'.format(self.src_version, self.src_commit)
+        if self.args.sm_line != 'sm11':
+            output += self.args.sm_line + '-'
         print('[Package] Output file: {0}'.format(output))
 
         in_archive = ('addons', 'cfg')

@@ -1,0 +1,25 @@
+diff --git a/AMBuildScript b/AMBuildScript
+index bef3d23..252c8c2 100644
+--- a/AMBuildScript
++++ b/AMBuildScript
+@@ -10,8 +10,7 @@ class CSSDM:
+ 		#Build SDK info
+ 		self.sdkInfo = { }
+ 
+-		self.sdkInfo['ep1'] =  {'sdk': 'HL2SDKEP1',     'ext': '1.ep1',  'def': '1',
+-		                         'name': 'EPISODEONE',           'platform': ['windows', 'linux']}
++		# SM 1.13 / MM 1.12: no core-legacy (1.ep1); only the 2.ep1 extension is built.
+ 		self.sdkInfo['ep1_plapi'] =  {'sdk': 'HL2SDKEP1',     'ext': '2.ep1',  'def': '1',
+ 		                         'name': 'EPISODEONE',           'platform': ['windows', 'linux']}
+ 
+@@ -85,7 +84,9 @@ class CSSDM:
+ 				self.compiler.AddToListVar('CFLAGS', '-Wno-restrict')
+ 				self.compiler.AddToListVar('CXXFLAGS', '-Wno-class-memaccess')
+ 				self.compiler.AddToListVar('CXXFLAGS', '-Wno-sized-deallocation')
+-				self.compiler.AddToListVar('CXXFLAGS', '-std=c++11')
++				# SM 1.13 public headers (amtl) need C++17; episode1 SDK still uses 'register'.
++				self.compiler.AddToListVar('CXXFLAGS', '-std=c++17')
++				self.compiler.AddToListVar('CXXFLAGS', '-Wno-register')
+ 				if (self.vendor == 'gcc' and cxx.majorVersion >= 4 and cxx.minorVersion >= 7) or \
+ 						(self.vendor == 'clang' and cxx.majorVersion >= 3):
+ 					self.compiler.AddToListVar('CXXFLAGS', '-Wno-delete-non-virtual-dtor')
