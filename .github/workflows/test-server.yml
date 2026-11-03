@@ -122,9 +122,6 @@ jobs:
       # sm12/sm13 test the packages that line-sm12-latest / line-sm13-latest point at
       # (builder/run/css34_line.py); the harness is the fork at the line-sm13-latest tag.
       HARNESS_REF: line-sm13-latest
-      # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
-      # (also on master's build; the old checks never matched it). Warn there, fail on sm12/sm13.
-      CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line != 'sm11' && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
