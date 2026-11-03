@@ -150,13 +150,15 @@ jobs:
             lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 \
             libstdc++6:i386 zlib1g:i386
 
-      - name: CSS:DM smoke + botplay (${{ matrix.line }})
+      - name: CSS:DM smoke (+ botplay on sm13) (${{ matrix.line }})
         env:
           SERVER_DIR: ${{ github.workspace }}/.ci-server
           CACHE_DIR: ${{ github.workspace }}/.ci-cache
           SM_CSS34_ROOT: ${{ github.workspace }}/.ci-vendor/sourcemod-css34
           RECORD_SECS: ${{ github.event.inputs.record_secs || '180' }}
-          RUN_BOTPLAY: "1"
+          # The harness botplay compiles SM >= 1.12 probe plugins (dhooks include,
+          # GeoipLatitude), which SM 1.11's spcomp cannot build: smoke only on sm11.
+          RUN_BOTPLAY: ${{ matrix.line == 'sm13' && '1' || '0' }}
           APPLY_SRCDS_PATCH: "1"
           APPLY_VALVE_RC: "1"
           INSTALL_SMAC: "0"
