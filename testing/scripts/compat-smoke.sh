@@ -7,9 +7,10 @@
 #   SM_ID, SM_LABEL build id/label from testing/compat/sm-builds.json
 #   SM_PACKAGE      SourceMod archive (.tar.gz or .zip; may also contain Metamod)
 #   MM_PACKAGE      Metamod archive (optional when SM_PACKAGE ships Metamod)
-#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena-ext, ...)
+#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena19, myarena111)
 #   CSSDM_PACKAGE   cssdm-*-css34-*linux.tar.gz (plugins, gamedata, cfg, extension)
 #   CSSDM_EXT       optional cssdm.ext.2.ep1.so that replaces the package's extensions
+#   CSSDM_GAMEDATA  optional cssdm.games.txt that replaces the package's gamedata
 #   RESULTS         JSON lines file; OUT_DIR keeps the console log per cell
 #   BOT_SECS        bot play length (default 90)
 #   SRCDS_PREFIX    command prefix for srcds, e.g. FEX on ARM (passed to compat-run.py)
@@ -20,6 +21,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SM_LABEL="${SM_LABEL:-${SM_ID}}"
 MM_PACKAGE="${MM_PACKAGE:-}"
 CSSDM_EXT="${CSSDM_EXT:-}"
+CSSDM_GAMEDATA="${CSSDM_GAMEDATA:-}"
 OUT_DIR="${OUT_DIR:-$(dirname "${RESULTS}")}"
 export BOT_SECS="${BOT_SECS:-90}"
 
@@ -55,6 +57,7 @@ if [[ -n "${CSSDM_EXT}" ]]; then
   rm -f "${cs}"/addons/sourcemod/extensions/cssdm.ext.*.so
   cp -f "${CSSDM_EXT}" "${cs}/addons/sourcemod/extensions/cssdm.ext.2.ep1.so"
 fi
+[[ -n "${CSSDM_GAMEDATA}" ]] && cp -f "${CSSDM_GAMEDATA}" "${cs}/addons/sourcemod/gamedata/cssdm.games.txt"
 touch "${cs}/addons/sourcemod/extensions/cssdm.autoload"
 sed -i 's/^cssdm_enabled[[:space:]]*".*"/cssdm_enabled "1"/' "${cs}/cfg/cssdm/cssdm.cfg" 2>/dev/null || true
 
