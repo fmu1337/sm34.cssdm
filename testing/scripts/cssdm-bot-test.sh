@@ -11,8 +11,7 @@ RECORD_SECS="${RECORD_SECS:-180}"
 RUN_BOTPLAY="${RUN_BOTPLAY:-1}"
 APPLY_SRCDS_PATCH="${APPLY_SRCDS_PATCH:-1}"
 APPLY_VALVE_RC="${APPLY_VALVE_RC:-1}"
-# sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm12, sm13: fmu1337/sourcemod-css34 release
-# packages (SM_RELEASE_TAG).
+# sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm13: fmu1337/sourcemod-css34 release packages.
 CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
 SM_RELEASE_TAG="${SM_RELEASE_TAG:-1.13.0.7478-mm1.12.0-r3}"
 SM_RELEASE_REPO="${SM_RELEASE_REPO:-fmu1337/sourcemod-css34}"
@@ -76,7 +75,7 @@ case "${CSSDM_SM_LINE}" in
     DEFAULT_MM_VERSION_EXPECT="1.10.6"
     DEFAULT_SM_VERSION_EXPECT="1.11.0.6572"
     ;;
-  sm12|sm13)
+  sm13)
     # Install the css34 SM 1.13 / MM 1.12 release packages (checksum-verified), then CSS:DM.
     rel_dir="${CACHE_DIR}/${SM_RELEASE_TAG}"
     rel_url="https://github.com/${SM_RELEASE_REPO}/releases/download/${SM_RELEASE_TAG}"
@@ -95,7 +94,7 @@ case "${CSSDM_SM_LINE}" in
     DEFAULT_MM_VERSION_EXPECT="$(sed -E 's/^.*-mm([0-9.]+)(-.*)?$/\1/' <<<"${SM_RELEASE_TAG}")"
     ;;
   *)
-    echo "Unknown CSSDM_SM_LINE=${CSSDM_SM_LINE} (use sm11, sm12 or sm13)" >&2
+    echo "Unknown CSSDM_SM_LINE=${CSSDM_SM_LINE} (use sm11 or sm13)" >&2
     exit 1
     ;;
 esac

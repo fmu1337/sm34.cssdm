@@ -3,12 +3,10 @@
 set -euo pipefail
 
 CSSDM_PACKAGE="${CSSDM_PACKAGE:?CSSDM_PACKAGE is required}"
-# sm11: 1.ep1 + 2.ep1 against SM 1.10 headers (API 8). sm12 (API 8) and sm13 (API 9..11):
-# 2.ep1 only (MM 1.12 has no core-legacy).
+# sm11: 1.ep1 + 2.ep1 against SM 1.10 headers (API 8). sm13: 2.ep1 only (MM 1.12 has no core-legacy).
 CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
 case "${CSSDM_SM_LINE}" in
   sm11) EXT_API_MIN="${EXT_API_MIN:-8}"; EXT_API_MAX="${EXT_API_MAX:-8}" ;;
-  sm12) EXT_API_MIN="${EXT_API_MIN:-8}"; EXT_API_MAX="${EXT_API_MAX:-8}" ;;
   sm13) EXT_API_MIN="${EXT_API_MIN:-9}"; EXT_API_MAX="${EXT_API_MAX:-11}" ;;
   *) echo "Unknown CSSDM_SM_LINE=${CSSDM_SM_LINE}" >&2; exit 1 ;;
 esac
