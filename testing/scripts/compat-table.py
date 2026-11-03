@@ -43,7 +43,7 @@ def parse(args):
     mapped = open(args.maps).read().split() if os.path.isfile(args.maps) else []
 
     r = {'sm_id': args.sm_id, 'sm_label': args.sm_label, 'cssdm_id': args.cssdm_id, 'rc': args.rc}
-    m = re.search(r'Metamod:Source [Vv]ersion:? (\S+)', text)
+    m = re.search(r'Metamod:Source [Vv]ersion:? (\d\S*)', text)
     r['mm_version'] = m.group(1) if m else None
     m = re.search(r'SourceMod Version: (\S+)', text)
     r['sm_version'] = m.group(1) if m else None
