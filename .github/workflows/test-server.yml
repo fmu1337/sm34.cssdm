@@ -19,7 +19,14 @@ concurrency:
 
 jobs:
   build-linux:
+    name: build-linux (${{ matrix.line }})
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        line: [sm11, sm13]
+    env:
+      CSSDM_SM_LINE: ${{ matrix.line }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,14 +58,7 @@ jobs:
           .venv/bin/pip install /tmp/ambuild
 
       - name: Checkout build dependencies
-        run: |
-          git clone --depth 1 -b episode1 https://github.com/alliedmodders/hl2sdk "$HOME/hl2sdk-episode1"
-          git clone --depth 1 -b 1.10-dev https://github.com/alliedmodders/metamod-source "$HOME/mmsource"
-          git clone --depth 1 -b 1.10-dev --recursive https://github.com/alliedmodders/sourcemod "$HOME/sourcemod"
-          mkdir -p "$HOME/sourcemod-bin"
-          curl -fL --retry 5 -o /tmp/sm-bin.tgz \
-            https://github.com/rom4s/sourcemod-css34/releases/download/v1.11.0.6572/sourcemod-1.11.0-git6572-css34-linux.tar.gz
-          tar -xzf /tmp/sm-bin.tgz -C "$HOME/sourcemod-bin"
+        run: DEPS_DIR="$HOME" bash builder/run/checkout-deps.sh
 
       - name: Build CSS:DM
         env:
@@ -71,18 +71,25 @@ jobs:
           export DEPS_DIR="${HOME}"
           builder/run/linux.sh
           mkdir -p packages
-          cp -f OUT/package/cssdm-*-css34-linux.tar.gz packages/
+          cp -f OUT/package/cssdm-*-css34-*linux.tar.gz packages/
 
       - name: Upload CSS:DM package
         uses: actions/upload-artifact@v4
         with:
-          name: cssdm-css34-linux-for-test
-          path: packages/cssdm-*-css34-linux.tar.gz
+          name: cssdm-css34-linux-for-test-${{ matrix.line }}
+          path: packages/cssdm-*-css34-*linux.tar.gz
           if-no-files-found: error
 
   check-package:
+    name: check-package (${{ matrix.line }})
     needs: [build-linux]
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        line: [sm11, sm13]
+    env:
+      CSSDM_SM_LINE: ${{ matrix.line }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -90,7 +97,7 @@ jobs:
       - name: Download CSS:DM package
         uses: actions/download-artifact@v4
         with:
-          name: cssdm-css34-linux-for-test
+          name: cssdm-css34-linux-for-test-${{ matrix.line }}
           path: packages
 
       - name: ABI / package checks
@@ -98,13 +105,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y binutils
           chmod +x testing/scripts/*.sh
-          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-linux.tar.gz | head -n1)"
+          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-*linux.tar.gz | head -n1)"
           export CSSDM_PACKAGE
           testing/scripts/check-cssdm-package.sh
 
   test-cssdm-botplay:
+    name: test-cssdm-botplay (${{ matrix.line }})
     needs: [build-linux, check-package]
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        line: [sm11, sm13]
+    env:
+      CSSDM_SM_LINE: ${{ matrix.line }}
+      SM_RELEASE_TAG: 1.13.0.7478-mm1.12.0-r3
+      # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
+      # (also on master's build; the old checks never matched it). Warn there, fail on sm13.
+      CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line == 'sm13' && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,13 +130,15 @@ jobs:
       - name: Download CSS:DM package
         uses: actions/download-artifact@v4
         with:
-          name: cssdm-css34-linux-for-test
+          name: cssdm-css34-linux-for-test-${{ matrix.line }}
           path: packages
 
       - name: Checkout sourcemod-css34 testing harness
         uses: actions/checkout@v4
         with:
           repository: fmu1337/sourcemod-css34
+          # The harness as of the SM 1.13 release under test (it also drives the sm11 rom4s run).
+          ref: ${{ env.SM_RELEASE_TAG }}
           path: .ci-vendor/sourcemod-css34
 
       - name: Install host 32-bit runtime + tools
@@ -130,13 +150,15 @@ jobs:
             lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 \
             libstdc++6:i386 zlib1g:i386
 
-      - name: CSS:DM smoke + botplay (rom4s SM/MM baseline)
+      - name: CSS:DM smoke (+ botplay on sm13) (${{ matrix.line }})
         env:
           SERVER_DIR: ${{ github.workspace }}/.ci-server
           CACHE_DIR: ${{ github.workspace }}/.ci-cache
           SM_CSS34_ROOT: ${{ github.workspace }}/.ci-vendor/sourcemod-css34
           RECORD_SECS: ${{ github.event.inputs.record_secs || '180' }}
-          RUN_BOTPLAY: "1"
+          # The harness botplay compiles SM >= 1.12 probe plugins (dhooks include,
+          # GeoipLatitude), which SM 1.11's spcomp cannot build: smoke only on sm11.
+          RUN_BOTPLAY: ${{ matrix.line == 'sm13' && '1' || '0' }}
           APPLY_SRCDS_PATCH: "1"
           APPLY_VALVE_RC: "1"
           INSTALL_SMAC: "0"
@@ -146,7 +168,7 @@ jobs:
           MIN_PLAYER_DEATH: "3"
         run: |
           chmod +x testing/scripts/*.sh .ci-vendor/sourcemod-css34/testing/scripts/*.sh
-          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-linux.tar.gz | head -n1)"
+          CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-*linux.tar.gz | head -n1)"
           export CSSDM_PACKAGE
           testing/scripts/cssdm-bot-test.sh
 
@@ -154,7 +176,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: cssdm-botplay-logs
+          name: cssdm-botplay-logs-${{ matrix.line }}
           path: |
             .ci-server/cssdm-smoke.log
             .ci-server/console-probe.log

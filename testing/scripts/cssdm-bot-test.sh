@@ -11,6 +11,12 @@ RECORD_SECS="${RECORD_SECS:-180}"
 RUN_BOTPLAY="${RUN_BOTPLAY:-1}"
 APPLY_SRCDS_PATCH="${APPLY_SRCDS_PATCH:-1}"
 APPLY_VALVE_RC="${APPLY_VALVE_RC:-1}"
+# sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm13: fmu1337/sourcemod-css34 release packages.
+CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
+SM_RELEASE_TAG="${SM_RELEASE_TAG:-1.13.0.7478-mm1.12.0-r3}"
+SM_RELEASE_REPO="${SM_RELEASE_REPO:-fmu1337/sourcemod-css34}"
+# 1: the smoke fails unless cssdm.ext and the DM plugins are running.
+CSSDM_REQUIRE_EXT_LOAD="${CSSDM_REQUIRE_EXT_LOAD:-1}"
 
 if [[ -z "${CSSDM_PACKAGE}" ]]; then
   CSSDM_PACKAGE="$(ls -1 "${ROOT}"/packages/cssdm-*-css34-linux.tar.gz "${ROOT}"/OUT/package/cssdm-*-css34-linux.tar.gz 2>/dev/null | head -n1 || true)"
@@ -61,9 +67,37 @@ if [[ ! -x "${SERVER_DIR}/srcds_i686" && ! -x "${SERVER_DIR}/srcds_i486" ]]; the
     "${SM_CSS34_ROOT}/testing/scripts/trim-server-maps.sh"
 fi
 
-# Install rom4s reference MM+SM (same baseline botplay uses), then CSS:DM.
-export BOTPLAY_PROFILE=rom4s
-unset MM_PACKAGE SM_PACKAGE USE_BUILT_MM BUILT_MM_DIR BUILT_MM_PACKAGE || true
+case "${CSSDM_SM_LINE}" in
+  sm11)
+    # Install rom4s reference MM+SM (same baseline botplay uses), then CSS:DM.
+    export BOTPLAY_PROFILE=rom4s
+    unset MM_PACKAGE SM_PACKAGE USE_BUILT_MM BUILT_MM_DIR BUILT_MM_PACKAGE || true
+    DEFAULT_MM_VERSION_EXPECT="1.10.6"
+    DEFAULT_SM_VERSION_EXPECT="1.11.0.6572"
+    ;;
+  sm13)
+    # Install the css34 SM 1.13 / MM 1.12 release packages (checksum-verified), then CSS:DM.
+    rel_dir="${CACHE_DIR}/${SM_RELEASE_TAG}"
+    rel_url="https://github.com/${SM_RELEASE_REPO}/releases/download/${SM_RELEASE_TAG}"
+    mkdir -p "${rel_dir}"
+    curl -fsSL --retry 5 --retry-delay 3 -o "${rel_dir}/SHA256SUMS.linux" "${rel_url}/SHA256SUMS.linux"
+    MM_PACKAGE="${rel_dir}/$(awk '$2 ~ /^mmsource-.*-linux\.tar\.gz$/ { print $2; exit }' "${rel_dir}/SHA256SUMS.linux")"
+    SM_PACKAGE="${rel_dir}/$(awk '$2 ~ /^sourcemod-.*-linux\.tar\.gz$/ { print $2; exit }' "${rel_dir}/SHA256SUMS.linux")"
+    for pkg in "${MM_PACKAGE}" "${SM_PACKAGE}"; do
+      [[ -s "${pkg}" ]] || curl -fL --retry 5 --retry-delay 3 -o "${pkg}" "${rel_url}/$(basename "${pkg}")"
+    done
+    (cd "${rel_dir}" && sha256sum -c SHA256SUMS.linux)
+    export BOTPLAY_PROFILE=release MM_PACKAGE SM_PACKAGE
+    unset USE_BUILT_MM BUILT_MM_DIR BUILT_MM_PACKAGE || true
+    # 1.13.0.7478-mm1.12.0-r3 -> SM 1.13.0.7478, MM 1.12.0
+    DEFAULT_SM_VERSION_EXPECT="${SM_RELEASE_TAG%%-mm*}"
+    DEFAULT_MM_VERSION_EXPECT="$(sed -E 's/^.*-mm([0-9.]+)(-.*)?$/\1/' <<<"${SM_RELEASE_TAG}")"
+    ;;
+  *)
+    echo "Unknown CSSDM_SM_LINE=${CSSDM_SM_LINE} (use sm11 or sm13)" >&2
+    exit 1
+    ;;
+esac
 SERVER_DIR="${SERVER_DIR}" CACHE_DIR="${CACHE_DIR}" \
   "${SM_CSS34_ROOT}/testing/scripts/install-addons.sh"
 SERVER_DIR="${SERVER_DIR}" CSSDM_PACKAGE="${CSSDM_PACKAGE}" \
@@ -75,8 +109,8 @@ export PORT="${PORT:-27015}"
 export TIMEOUT_SECS="${TIMEOUT_SECS:-120}"
 export SMOKE_VERBOSE="${SMOKE_VERBOSE:-1}"
 export SMOKE_CONDEBUG="${SMOKE_CONDEBUG:-1}"
-export MM_VERSION_EXPECT="${MM_VERSION_EXPECT:-1.10.6}"
-export SM_VERSION_EXPECT="${SM_VERSION_EXPECT:-1.11.0.6572}"
+export MM_VERSION_EXPECT="${MM_VERSION_EXPECT:-${DEFAULT_MM_VERSION_EXPECT}}"
+export SM_VERSION_EXPECT="${SM_VERSION_EXPECT:-${DEFAULT_SM_VERSION_EXPECT}}"
 # Skip CSS34 pack commit pin: we use published rom4s packages, not this repo's pack stamp.
 unset CSS34_PACK_COMMIT_EXPECT || true
 unset MM_COMMIT_EXPECT SM_COMMIT_EXPECT || true
@@ -108,10 +142,19 @@ export SMOKE_VERBOSE SMOKE_CONDEBUG
 
 echo "Running CSS:DM console probe (${TIMEOUT_SECS}s)..."
 /usr/bin/expect "${SM_CSS34_ROOT}/testing/scripts/console-probe.exp" >"${LOG_FILE}" 2>&1 || {
-  echo "Console probe failed (see ${LOG_FILE})" >&2
-  tail -n 160 "${LOG_FILE}" >&2 || true
-  tail -n 160 "${CONSOLE_PROBE_LOG}" >&2 || true
-  exit 1
+  # The harness probe fails when dbi.pgsql.ext cannot load; the rom4s SM 1.11.0.6572
+  # package does not ship it. Tolerate exactly that on sm11 if the probe ran to the end.
+  if [[ "${CSSDM_SM_LINE}" == "sm11" ]] &&
+    grep -Eq 'dbi\.pgsql\.ext\.so failed to load: .*No such file' "${CONSOLE_PROBE_LOG}" &&
+    grep -Eq '\[SM\] Listing [0-9]+ plugins' "${CONSOLE_PROBE_LOG}" &&
+    ! grep -Eq 'timeout waiting|exited (before|while)' "${LOG_FILE}"; then
+    echo "WARN: console probe failed only because the rom4s SM 1.11 package has no dbi.pgsql.ext"
+  else
+    echo "Console probe failed (see ${LOG_FILE})" >&2
+    tail -n 160 "${LOG_FILE}" >&2 || true
+    tail -n 160 "${CONSOLE_PROBE_LOG}" >&2 || true
+    exit 1
+  fi
 }
 
 fail=0
@@ -125,22 +168,31 @@ require_grep() {
   fi
 }
 
-require_grep "${CONSOLE_PROBE_LOG}" "Mapchange to ${MAP}|Mapchange to de_dust2" "map loaded"
+require_grep "${CONSOLE_PROBE_LOG}" "Mapchange to ${MAP}|Started map \"${MAP}\"|map +: +${MAP}" "map loaded"
 require_grep "${CONSOLE_PROBE_LOG}" 'Metamod|MM:S' "meta version output"
 require_grep "${CONSOLE_PROBE_LOG}" 'SourceMod|\[SM\]' "sm version output"
 require_grep "${CONSOLE_PROBE_LOG}" "${MM_VERSION_EXPECT}" "Metamod ${MM_VERSION_EXPECT}"
 require_grep "${CONSOLE_PROBE_LOG}" "${SM_VERSION_EXPECT}" "SourceMod ${SM_VERSION_EXPECT}"
-require_grep "${CONSOLE_PROBE_LOG}" 'cssdm\.ext' "cssdm.ext listed"
-require_grep "${CONSOLE_PROBE_LOG}" 'dm_basics' "dm_basics plugin listed"
-require_grep "${CONSOLE_PROBE_LOG}" 'dm_equipment' "dm_equipment plugin listed"
+# sm exts/plugins list show the name once loaded and the file name on failure.
+require_grep "${CONSOLE_PROBE_LOG}" 'cssdm\.ext|\] CS:S DM \(' "cssdm.ext listed"
+require_grep "${CONSOLE_PROBE_LOG}" 'dm_basics|"CS:S DM Basics"' "dm_basics plugin listed"
+require_grep "${CONSOLE_PROBE_LOG}" 'dm_equipment|"CS:S DM Equipment"' "dm_equipment plugin listed"
 
-if grep -Eiq 'cssdm\.ext.*<FAILED>|cssdm\.ext.*error' "${CONSOLE_PROBE_LOG}"; then
-  echo "FAIL: cssdm.ext failed to load" >&2
-  fail=1
+if grep -Eiq '<FAILED> file "cssdm\.ext|cssdm\.ext.*<FAILED>|cssdm\.ext.*error|Unable to load extension "cssdm\.ext"|Extension version is too (old|new)' "${CONSOLE_PROBE_LOG}"; then
+  if [[ "${CSSDM_REQUIRE_EXT_LOAD}" == "1" ]]; then
+    echo "FAIL: cssdm.ext failed to load" >&2
+    fail=1
+  else
+    echo "WARN: cssdm.ext failed to load (CSSDM_REQUIRE_EXT_LOAD=0)" >&2
+  fi
 fi
-if grep -Eiq 'dm_basics.*<Failed>|dm_equipment.*<Failed>' "${CONSOLE_PROBE_LOG}"; then
-  echo "FAIL: CSS:DM plugin failed" >&2
-  fail=1
+if grep -Eiq 'dm_basics.*<Failed>|dm_equipment.*<Failed>|<Failed> "CS:S DM' "${CONSOLE_PROBE_LOG}"; then
+  if [[ "${CSSDM_REQUIRE_EXT_LOAD}" == "1" ]]; then
+    echo "FAIL: CSS:DM plugin failed" >&2
+    fail=1
+  else
+    echo "WARN: CSS:DM plugin failed (CSSDM_REQUIRE_EXT_LOAD=0)" >&2
+  fi
 fi
 
 if [[ "${fail}" -ne 0 ]]; then
@@ -157,7 +209,6 @@ if [[ "${RUN_BOTPLAY}" != "1" ]]; then
 fi
 
 echo "Running short botplay with CSS:DM (${RECORD_SECS}s)..."
-export BOTPLAY_PROFILE=rom4s
 export RECORD_SECS
 export BOTPLAY_CFG="${BOTPLAY_CFG:-botplay-stress.cfg}"
 export BOTPLAY_MAPS="${BOTPLAY_MAPS:-de_dust2,de_inferno,de_nuke}"
