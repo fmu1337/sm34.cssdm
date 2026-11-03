@@ -14,7 +14,7 @@ APPLY_VALVE_RC="${APPLY_VALVE_RC:-1}"
 # sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm12, sm13: fmu1337/sourcemod-css34 release
 # packages (SM_RELEASE_TAG).
 CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
-SM_RELEASE_TAG="${SM_RELEASE_TAG:-1.13.0.7478-mm1.12.0-r3}"
+SM_RELEASE_TAG="${SM_RELEASE_TAG:-1.13.0.7478-mm1.12.0-r5}"
 SM_RELEASE_REPO="${SM_RELEASE_REPO:-fmu1337/sourcemod-css34}"
 # 1: the smoke fails unless cssdm.ext and the DM plugins are running.
 CSSDM_REQUIRE_EXT_LOAD="${CSSDM_REQUIRE_EXT_LOAD:-1}"
@@ -90,7 +90,7 @@ case "${CSSDM_SM_LINE}" in
     (cd "${rel_dir}" && sha256sum -c SHA256SUMS.linux)
     export BOTPLAY_PROFILE=release MM_PACKAGE SM_PACKAGE
     unset USE_BUILT_MM BUILT_MM_DIR BUILT_MM_PACKAGE || true
-    # 1.13.0.7478-mm1.12.0-r3 -> SM 1.13.0.7478, MM 1.12.0
+    # 1.13.0.7478-mm1.12.0-r5 -> SM 1.13.0.7478, MM 1.12.0
     DEFAULT_SM_VERSION_EXPECT="${SM_RELEASE_TAG%%-mm*}"
     DEFAULT_MM_VERSION_EXPECT="$(sed -E 's/^.*-mm([0-9.]+)(-.*)?$/\1/' <<<"${SM_RELEASE_TAG}")"
     ;;
