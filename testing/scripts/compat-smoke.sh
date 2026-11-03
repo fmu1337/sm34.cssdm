@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One cell of the CSS:DM compatibility table: install a Metamod + SourceMod build and a
 # CSS:DM package into a fetched CS:S v34 tree (SERVER_DIR), boot it with
-# compat-run.exp, let bots play, and append one JSON result line to RESULTS.
+# compat-run.py, let bots play, and append one JSON result line to RESULTS.
 #
 #   SERVER_DIR      CS:S v34 tree (testing/scripts/fetch-server.sh of fmu1337/sourcemod-css34)
 #   SM_ID, SM_LABEL build id/label from testing/compat/sm-builds.json
@@ -12,6 +12,7 @@
 #   CSSDM_EXT       optional cssdm.ext.2.ep1.so that replaces the package's extensions
 #   RESULTS         JSON lines file; OUT_DIR keeps the console log per cell
 #   BOT_SECS        bot play length (default 90)
+#   SRCDS_PREFIX    command prefix for srcds, e.g. FEX on ARM (passed to compat-run.py)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -30,7 +31,7 @@ cs="${SERVER_DIR}/cstrike"
 
 extract() {
   case "$1" in
-    *.zip) unzip -oq "$1" -d "${cs}" ;;
+    *.zip) python3 -m zipfile -e "$1" "${cs}" ;;
     *) tar -xzf "$1" -C "${cs}" ;;
   esac
 }
@@ -59,13 +60,13 @@ sed -i 's/^cssdm_enabled[[:space:]]*".*"/cssdm_enabled "1"/' "${cs}/cfg/cssdm/cs
 
 set +e
 SERVER_DIR="${SERVER_DIR}" COMPAT_LOG="${console_log}" MAPS_FILE="${maps_file}" \
-  timeout $((BOT_SECS + 300)) expect "${ROOT}/testing/scripts/compat-run.exp" >"${OUT_DIR}/${cell}.expect.txt" 2>&1
+  timeout $((BOT_SECS + 400)) python3 "${ROOT}/testing/scripts/compat-run.py" >"${OUT_DIR}/${cell}.runner.txt" 2>&1
 rc=$?
 set -e
-cat "${OUT_DIR}/${cell}.expect.txt"
+cat "${OUT_DIR}/${cell}.runner.txt"
 
 python3 "${ROOT}/testing/scripts/compat-table.py" parse \
   --sm-id "${SM_ID}" --sm-label "${SM_LABEL}" --cssdm-id "${CSSDM_ID}" \
-  --console "${console_log}" --maps "${maps_file}" --expect-out "${OUT_DIR}/${cell}.expect.txt" \
+  --console "${console_log}" --maps "${maps_file}" --runner-out "${OUT_DIR}/${cell}.runner.txt" \
   --rc "${rc}" --logs-dir "${cs}/logs" >>"${RESULTS}"
 tail -n1 "${RESULTS}"

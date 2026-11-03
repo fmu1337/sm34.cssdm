@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CSS:DM compatibility table.
 
-  parse  turn one compat-run.exp console log into a JSON result line (stdout)
+  parse  turn one compat-run.py console log into a JSON result line (stdout)
   table  render result lines as a Markdown table (rows: SM builds, columns: CSS:DM variants)
 """
 import argparse
@@ -38,7 +38,7 @@ def parse(args):
     text = ''
     if os.path.isfile(args.console):
         text = open(args.console, encoding='utf-8', errors='replace').read().replace('\r', '')
-    expect_out = open(args.expect_out, encoding='utf-8', errors='replace').read() if os.path.isfile(args.expect_out) else ''
+    expect_out = open(args.runner_out, encoding='utf-8', errors='replace').read() if os.path.isfile(args.runner_out) else ''
     mapped = open(args.maps).read().split() if os.path.isfile(args.maps) else []
 
     r = {'sm_id': args.sm_id, 'sm_label': args.sm_label, 'cssdm_id': args.cssdm_id, 'rc': args.rc}
@@ -139,7 +139,7 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('parse')
-    for a in ('--sm-id', '--sm-label', '--cssdm-id', '--console', '--maps', '--expect-out', '--logs-dir'):
+    for a in ('--sm-id', '--sm-label', '--cssdm-id', '--console', '--maps', '--runner-out', '--logs-dir'):
         p.add_argument(a, default='')
     p.add_argument('--rc', type=int, default=0)
     t = sub.add_parser('table')
