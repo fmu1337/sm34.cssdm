@@ -24,12 +24,13 @@ if [[ -z "${CSSDM:-}" ]]; then
   [[ -f "${PKG_DIR}/myarena111-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena111"
 fi
 
-# id <TAB> label <TAB> local file <TAB> mm url <TAB> mm sha <TAB> sm url <TAB> sm sha
+# id, label, local file, mm url, mm sha, sm url, sm sha; split on \x1f, which (unlike a tab)
+# keeps empty fields
 mapfile -t rows < <(python3 - "${ROOT}/testing/compat/sm-builds.json" <<'EOF'
 import json, sys
 for b in json.load(open(sys.argv[1]))['builds']:
     mm, sm = b.get('mm', {}), b.get('sm', {})
-    print('\t'.join([b['id'], b['label'], b.get('local', ''), mm.get('url', ''), mm.get('sha256', ''),
+    print('\x1f'.join([b['id'], b['label'], b.get('local', ''), mm.get('url', ''), mm.get('sha256', ''),
                      sm.get('url', ''), sm.get('sha256', '')]))
 EOF
 )
@@ -42,7 +43,7 @@ fetch() {  # url sha -> cached path
 }
 
 for row in "${rows[@]}"; do
-  IFS=$'\t' read -r id label local_file mm_url mm_sha sm_url sm_sha <<<"${row}"
+  IFS=$'\x1f' read -r id label local_file mm_url mm_sha sm_url sm_sha <<<"${row}"
   if [[ -n "${BUILDS:-}" && " ${BUILDS} " != *" ${id} "* ]]; then
     continue
   fi
