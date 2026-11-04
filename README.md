@@ -1,101 +1,58 @@
 # sm34.cssdm — CS:S DM для Counter-Strike: Source v34
 
-Сборка [CS:S Deathmatch](https://github.com/alliedmodders/cssdm) (CSS:DM) под **CS:S v34** и SourceMod 1.10 с бинарниками для css34.
+Сборка [CS:S Deathmatch](https://github.com/alliedmodders/cssdm) (CSS:DM) под **CS:S v34** (SDK Episode One). Исходники берутся из сабмодуля `cssdm`, поверх накладываются патчи из `builder/patches/`: Engine v34, ConVar/CCommand эпохи ep1, gamedata, без CS:GO-таргетов.
 
-Исходники берутся из сабмодуля [`alliedmodders/cssdm`](https://github.com/alliedmodders/cssdm), затем на них накладываются патчи из `builder/patches/` (SDK Episode One / Engine v34, API ConVar/CCommand эпохи ep1, gamedata, отключение CS:GO-таргетов).
+Нужен только DM-серверу: cssdm зависит от SourceMod, но SourceMod от cssdm не зависит.
 
-## Нужен ли этот проект для sourcemod-css34?
+## Артефакты
 
-**Нет.** Этот репозиторий **не является частью** [sourcemod-css34](https://github.com/rom4s/sourcemod-css34) и **не нужен**, чтобы собрать или запустить сам SourceMod под CS:S v34.
+Workflow `Build` собирает по одному пакету на каждую линию SourceMod (артефакты прогона на `master`):
 
-| Вопрос | Ответ |
-|--------|--------|
-| Нужен ли cssdm, чтобы работал sourcemod-css34? | Нет |
-| Нужен ли sourcemod-css34, чтобы работал cssdm? | Да |
-| Когда ставить этот проект? | Только если на сервере нужен режим **Deathmatch** (респавн, FFA, слоты оружия, спавны и т.д.) |
+| Артефакт | Для какого SM | Бинарники | Extension API |
+|---|---|---|---|
+| `cssdm-css34-sm13-linux` | [fmu1337/sourcemod-css34](https://github.com/fmu1337/sourcemod-css34) 1.13 | `cssdm.ext.2.ep1.so` | 11 |
+| `cssdm-css34-sm12-linux` | fmu1337/sourcemod-css34 1.12 | `cssdm.ext.2.ep1.so` | 8 |
+| `cssdm-css34-linux` | SM 1.10–1.12 (линия sm11, исходники SM/MM 1.10-dev), оба ядра | `cssdm.ext.1.ep1.so` + `cssdm.ext.2.ep1.so` | 8 |
 
-Связь односторонняя: **cssdm зависит от SM css34**, а не наоборот.
+**Какой пакет на каком SM реально работает — см. [docs/COMPAT.md](docs/COMPAT.md).** Коротко:
 
-Типичный стек для DM на v34:
+- SM 1.13 → `sm13`.
+- SM 1.10–1.12 (наш форк, rom4s, MyArena 1.11; ядра `1.ep1` и `2.ep1`) → `cssdm-css34-linux`; на SM 1.12 подходит и `sm12`.
+- SM 1.9 и старше — рабочего cssdm нет.
 
-1. CS:S dedicated (v34)
-2. Metamod:Source
-3. [sourcemod-css34](https://github.com/rom4s/sourcemod-css34) (или совместимые бинарники SM 1.10 css34)
-4. **Этот пакет CSS:DM** — по желанию
+## Как устроена сборка
 
-## Что делает CSS:DM
+`builder/run/build.py` (через `builder/run/linux.sh`):
 
-- Режим deathmatch поверх обычного `cstrike`
-- Быстрый респавн, экипировка, спавны
-- Free-for-all (FFA) через gamedata/патчи
-- Конфиг: `cfg/cssdm/`, расширения `cssdm.ext.*.ep1`, плагины SourceMod
+1. применяет `builder/patches/2.1/1.patch`;
+2. патчи линии: sm11 — `builder/patches/mm110/2.1/*.patch` (`SMM_API` с видимостью `default`: без него Metamod не находит `CreateInterface` и пишет `Failed to get API`); sm12/sm13 — `builder/patches/mm112/2.1/*.patch` (без `1.ep1`, в MM 1.12 нет `core-legacy`; C++17; `-fno-sized-deallocation`);
+3. собирает AMBuild-ом и кладёт gamedata из `builder/patches/2.1/gamedata/`.
 
-Оригинал: [bailopan.net/cssdm](http://bailopan.net/cssdm/), исходники: [alliedmodders/cssdm](https://github.com/alliedmodders/cssdm).
-
-## CI
-
-GitHub Actions (как в [fmu1337/sourcemod-css34](https://github.com/fmu1337/sourcemod-css34)):
-
-| Workflow | Что делает |
-|----------|------------|
-| `Build` | Собирает `cssdm-*-css34-linux.tar.gz`, проверяет ELF/состав пакета |
-| `Test Server` | Поднимает CS:S v34 + rom4s MM/SM, ставит CSS:DM, smoke (`cssdm.ext` + плагины) и короткий **botplay** |
-
-Для bot-теста переиспользуются скрипты из `fmu1337/sourcemod-css34` (`testing/scripts`). Локально:
-
-```bash
-# после успешной сборки:
-export CSSDM_PACKAGE=$PWD/OUT/package/cssdm-2.1.6-git268-css34-linux.tar.gz
-export RECORD_SECS=120 INSTALL_SMAC=0
-testing/scripts/cssdm-bot-test.sh
-```
-
-## Сборка
-
-Сабмодуль `cssdm` должен быть инициализирован:
+Зависимости (HL2SDK `episode1`, исходники Metamod/SourceMod и пакет SM ради `spcomp`) ставит `builder/run/checkout-deps.sh`. Для sm12/sm13 всё берётся из релизов-указателей форка `line-sm12-latest` / `line-sm13-latest` (`builder/run/css34_line.py`): коммиты SM/MM и тег релиза — из их `lines.json`, пакеты проверяются по `SHA256SUMS`. Номера релизов форк удаляет, указатели — нет.
 
 ```bash
 git submodule update --init --recursive
+export CSSDM_SM_LINE=sm13 DEPS_DIR=$HOME CC=gcc CXX=g++
+bash builder/run/checkout-deps.sh
+builder/run/linux.sh   # → OUT/package/cssdm-<ver>-git<N>-css34-sm13-linux.tar.gz
 ```
 
-Зависимости (Linux):
+## CI
 
-- HL2SDK `episode1`
-- Metamod:Source `1.10-dev` (исходники)
-- SourceMod `1.10-dev` (исходники) + пребилд `sourcemod-*-css34-*` (spcomp / bin)
-- AMBuild, `g++` multilib (`-m32`)
+| Workflow | Что делает |
+|---|---|
+| `Build` | Собирает все линии, проверяет состав пакета, ELF i386 и extension API (читается из `GetExtensionVersion()` в бинарнике) |
+| `Test Server` | CS:S v34 + MM/SM нужной линии, smoke: `cssdm.ext` и DM-плагины загружены. Для sm12/sm13 ещё botplay (на sm11 только smoke) |
+| `Compat` | Матрица «сборка SourceMod × пакет CSS:DM» → [docs/COMPAT.md](docs/COMPAT.md) |
 
-Пример:
-
-```bash
-export DEPS_DIR=$HOME   # hl2sdk-episode1, mmsource, sourcemod, sourcemod-bin
-export CC=gcc CXX=g++
-builder/run/linux.sh
-```
-
-Скрипт применяет патч из `builder/run/config.json` (ветка `2.1` → `1.patch`) и собирает:
-
-`cssdm-<version>-git<N>-css34-linux.tar.gz`
-
-В пакет подставляется gamedata из `builder/patches/2.1/gamedata/`.
-
-## Структура репозитория
-
-```
-.github/workflows/ # Build + Test Server (botplay)
-builder/
-  patches/2.1/     # патчи и gamedata под ep1 / css34
-  run/             # build.py, config.json, linux.sh, windows.bat
-cssdm/             # сабмодуль upstream CSS:DM
-testing/scripts/   # check/install/bot-test (smoke + botplay)
-```
+Тестовые скрипты лежат в `testing/scripts/`; сервер и harness берутся из [fmu1337/sourcemod-css34](https://github.com/fmu1337/sourcemod-css34) (`testing/scripts`).
 
 ## Связанные проекты
 
-- [rom4s/sourcemod-css34](https://github.com/rom4s/sourcemod-css34) — SourceMod под CS:S v34 (нужен для работы cssdm)
-- [alliedmodders/cssdm](https://github.com/alliedmodders/cssdm) — исходный CSS:DM
-- Upstream этого builder-репозитория: [rom4s/sm34.cssdm](https://github.com/rom4s/sm34.cssdm)
+- [fmu1337/sourcemod-css34](https://github.com/fmu1337/sourcemod-css34) — SourceMod 1.11–1.13 под CS:S v34
+- [rom4s/sourcemod-css34](https://github.com/rom4s/sourcemod-css34) — исходный SourceMod css34 (1.10/1.11)
+- [alliedmodders/cssdm](https://github.com/alliedmodders/cssdm) — исходный CSS:DM; upstream этого репо — [rom4s/sm34.cssdm](https://github.com/rom4s/sm34.cssdm)
 
 ## Лицензия
 
-GPL-2.0 (см. `LICENSE`). Upstream CSS:DM © AlliedModders LLC.
+GPL-2.0 (см. `LICENSE`). CSS:DM © AlliedModders LLC.

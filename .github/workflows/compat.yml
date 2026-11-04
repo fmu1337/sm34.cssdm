@@ -1,0 +1,191 @@
+name: Compat
+
+# CSS:DM compatibility table: every Metamod + SourceMod build in testing/compat/sm-builds.json
+# (except "local" ones) x every CSS:DM package from a master Build run. Each cell boots
+# CS:S v34, checks what loaded and lets bots play; the table job renders docs/COMPAT.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "Build run to take the CSS:DM packages from (default: latest successful on master)"
+        required: false
+        default: ""
+      bot_secs:
+        description: "Bot play length per cell (seconds)"
+        required: false
+        default: "90"
+  pull_request:
+    paths:
+      - .github/workflows/compat.yml
+      - testing/compat/**
+      - testing/scripts/compat-*
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-22.04
+    outputs:
+      builds: ${{ steps.matrix.outputs.builds }}
+      harness: ${{ steps.matrix.outputs.harness }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Our builds follow the fork's line-* pointers; the harness is the release tag that
+      # line-sm13-latest's lines.json names (its git tag is not moved with the release).
+      - name: Build matrix
+        id: matrix
+        run: |
+          echo "builds=$(python3 testing/scripts/compat-builds.py testing/compat/sm-builds.json --ci)" >>"$GITHUB_OUTPUT"
+          eval "$(python3 builder/run/css34_line.py --urls sm13 .ci-css34)"
+          echo "harness=${CSS34_TAG}" >>"$GITHUB_OUTPUT"
+
+      - name: Fetch CSS:DM packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.inputs.build_run_id }}
+        run: |
+          if [[ -z "${RUN_ID}" ]]; then
+            RUN_ID="$(gh run list -R "${GITHUB_REPOSITORY}" --workflow build.yml --branch master \
+              --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+          echo "CSS:DM packages from Build run ${RUN_ID}"
+          mkdir -p cssdm-packages
+          # Lines a Build run may produce; take whichever artifacts it has.
+          for pair in sm11:cssdm-css34-linux sm12:cssdm-css34-sm12-linux sm13:cssdm-css34-sm13-linux; do
+            v="${pair%%:*}" name="${pair#*:}"
+            if gh run download "${RUN_ID}" -R "${GITHUB_REPOSITORY}" -D "dl/${name}" -n "${name}"; then
+              cp dl/"${name}"/cssdm-*.tar.gz "cssdm-packages/${v}.tar.gz"
+              echo "${v}" >>cssdm-packages/variants.txt
+            fi
+          done
+          echo "${RUN_ID}" >cssdm-packages/build-run-id.txt
+          ls -l cssdm-packages; cat cssdm-packages/variants.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cssdm-packages
+          path: cssdm-packages
+
+  compat:
+    name: compat (${{ matrix.build.id }})
+    needs: setup
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        build: ${{ fromJSON(needs.setup.outputs.builds) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cssdm-packages
+          path: cssdm-packages
+
+      - name: Checkout sourcemod-css34 testing harness
+        uses: actions/checkout@v4
+        with:
+          repository: fmu1337/sourcemod-css34
+          ref: ${{ needs.setup.outputs.harness }}
+          path: .ci-vendor/sourcemod-css34
+
+      - name: Install host 32-bit runtime + tools
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl expect git unzip unrar \
+            lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 \
+            libstdc++6:i386 zlib1g:i386
+
+      - name: Fetch CS:S v34 server
+        env:
+          SERVER_DIR: ${{ github.workspace }}/.ci-server
+          CACHE_DIR: ${{ github.workspace }}/.ci-cache
+        run: |
+          h=.ci-vendor/sourcemod-css34/testing/scripts
+          chmod +x "$h"/*.sh testing/scripts/*.sh
+          "$h/fetch-server.sh"
+          "$h/apply-valve-rc-fix.sh"
+          "$h/apply-srcds-patch.sh" || true
+          KEEP_MAPS=de_dust2 "$h/trim-server-maps.sh"
+
+      - name: Fetch Metamod + SourceMod
+        env:
+          MM_URL: ${{ matrix.build.mm_url }}
+          MM_SHA: ${{ matrix.build.mm_sha }}
+          SM_URL: ${{ matrix.build.sm_url }}
+          SM_SHA: ${{ matrix.build.sm_sha }}
+        run: |
+          mkdir -p .ci-addons
+          curl -fL --retry 5 --retry-delay 3 -o ".ci-addons/mm-$(basename "$MM_URL")" "$MM_URL"
+          curl -fL --retry 5 --retry-delay 3 -o ".ci-addons/sm-$(basename "$SM_URL")" "$SM_URL"
+          echo "$MM_SHA  .ci-addons/mm-$(basename "$MM_URL")" | sha256sum -c -
+          echo "$SM_SHA  .ci-addons/sm-$(basename "$SM_URL")" | sha256sum -c -
+
+      - name: Run CSS:DM cells
+        env:
+          SERVER_DIR: ${{ github.workspace }}/.ci-server
+          SM_ID: ${{ matrix.build.id }}
+          SM_LABEL: ${{ matrix.build.label }}
+          MM_URL: ${{ matrix.build.mm_url }}
+          SM_URL: ${{ matrix.build.sm_url }}
+          RESULTS: ${{ github.workspace }}/compat-out/${{ matrix.build.id }}.jsonl
+          BOT_SECS: ${{ github.event.inputs.bot_secs || '90' }}
+        run: |
+          export MM_PACKAGE="$PWD/.ci-addons/mm-$(basename "$MM_URL")"
+          export SM_PACKAGE="$PWD/.ci-addons/sm-$(basename "$SM_URL")"
+          # "none" = the SM build without CSS:DM, the baseline for every other cell.
+          for v in none $(cat cssdm-packages/variants.txt); do
+            CSSDM_ID="$v" CSSDM_PACKAGE="$PWD/cssdm-packages/$v.tar.gz" testing/scripts/compat-smoke.sh
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compat-${{ matrix.build.id }}
+          path: compat-out
+          if-no-files-found: error
+
+  table:
+    needs: [setup, compat]
+    if: always() && needs.setup.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: compat-*
+          path: compat-out
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cssdm-packages
+          path: cssdm-packages
+
+      - name: Render table
+        run: |
+          {
+            echo "## CSS:DM compatibility (CI, $(date -u +%F))"
+            echo
+            echo "CSS:DM packages from Build run $(cat cssdm-packages/build-run-id.txt); bot play ${{ github.event.inputs.bot_secs || '90' }} s per cell."
+            echo
+            python3 testing/scripts/compat-table.py table --builds testing/compat/sm-builds.json compat-out/*.jsonl
+          } | tee compat-table.md >>"$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compat-table
+          path: |
+            compat-table.md
+            compat-out/*.jsonl
