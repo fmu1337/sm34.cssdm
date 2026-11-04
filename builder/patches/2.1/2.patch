@@ -403,6 +403,85 @@ index 3d942da..334a90f 100644
  {
  	// On CSGO, we handle this under the SDKHook since sometimes this won't
  	// get called when a client dies.
+diff --git a/scripting/dm_equipment.sp b/scripting/dm_equipment.sp
+index c8d8b5a..d96350b 100644
+--- a/scripting/dm_equipment.sp
++++ b/scripting/dm_equipment.sp
+@@ -86,6 +86,27 @@ Cookie g_EquipOption;
+ Cookie g_PrimaryWeaponPref;
+ Cookie g_SecondaryWeaponPref;
+ 
++/* css34: Cookie.GetInt / SetInt are SM 1.12+; same behaviour on top of Get / Set for older SM. */
++stock int CSSDM_CookieGetInt(Cookie cookie, int client, int defaultValue = 0)
++{
++	char buffer[12];
++	cookie.Get(client, buffer, sizeof(buffer));
++
++	int value;
++	if (!StringToIntEx(buffer, value))
++	{
++		value = defaultValue;
++	}
++	return value;
++}
++
++stock void CSSDM_CookieSetInt(Cookie cookie, int client, int value)
++{
++	char buffer[12];
++	IntToString(value, buffer, sizeof(buffer));
++	cookie.Set(client, buffer);
++}
++
+ /** PUBLIC INFO */
+ public Plugin myinfo =
+ {
+@@ -179,7 +200,7 @@ public void OnClientCookiesCached(int client)
+ 	{
+ 		return;
+ 	}
+-	WeaponOption equipOption = view_as<WeaponOption>(g_EquipOption.GetInt(client));
++	WeaponOption equipOption = view_as<WeaponOption>(CSSDM_CookieGetInt(g_EquipOption, client));
+ 	switch (equipOption)
+ 	{
+ 		case SAME_WEAPON_NO_MENU, RANDOM_WEAPON_NO_MENU:
+@@ -200,8 +221,8 @@ public void OnClientCookiesCached(int client)
+ 	}
+ 	else
+ 	{
+-		g_PrimaryChoices[client] = g_PrimaryWeaponPref.GetInt(client, -1);
+-		g_SecondaryChoices[client] = g_SecondaryWeaponPref.GetInt(client, -1);
++		g_PrimaryChoices[client] = CSSDM_CookieGetInt(g_PrimaryWeaponPref, client, -1);
++		g_SecondaryChoices[client] = CSSDM_CookieGetInt(g_SecondaryWeaponPref, client, -1);
+ 	}
+ }
+ 
+@@ -565,7 +586,7 @@ public int Menu_EquipHandler(Menu menu, MenuAction action, int param1, int param
+ 		g_GunMenuAvailable[param1] = false;
+ 		if (!IsFakeClient(param1))
+ 		{
+-			g_EquipOption.SetInt(param1, view_as<int>(value));
++			CSSDM_CookieSetInt(g_EquipOption, param1, view_as<int>(value));
+ 		}
+ 	}
+ 	else if (action == MenuAction_DisplayItem)
+@@ -606,7 +627,7 @@ public int Menu_PrimaryHandler(Menu menu, MenuAction action, int param1, int par
+ 		GivePrimary(param1, param2);
+ 		if (!IsFakeClient(param1))
+ 		{
+-			g_PrimaryWeaponPref.SetInt(param1, param2);
++			CSSDM_CookieSetInt(g_PrimaryWeaponPref, param1, param2);
+ 		}
+ 	}
+ 	else if (action == MenuAction_Display)
+@@ -645,7 +666,7 @@ public int Menu_SecondaryHandler(Menu menu, MenuAction action, int param1, int p
+ 		GiveSecondary(param1, param2);
+ 		if (!IsFakeClient(param1))
+ 		{
+-			g_SecondaryWeaponPref.SetInt(param1, param2);
++			CSSDM_CookieSetInt(g_SecondaryWeaponPref, param1, param2);
+ 		}
+ 		if (ChooseFromPrimary())
+ 		{
 diff --git a/scripting/dm_preset_spawns.sp b/scripting/dm_preset_spawns.sp
 index ca55f47..68fce8c 100644
 --- a/scripting/dm_preset_spawns.sp
