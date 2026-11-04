@@ -9,6 +9,12 @@
 			"CC": "gcc",
 			"CXX": "g++",
 			"patch": "1.patch"
+		},
+		"325": {
+			"CC": "gcc",
+			"CXX": "g++",
+			"patch": "2.patch",
+			"line_patches": false
 		}
 	}
 }

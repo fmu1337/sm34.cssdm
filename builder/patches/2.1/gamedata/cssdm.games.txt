@@ -31,6 +31,13 @@
 				"windows"		"2"
 			}
 			/* Virtual indexes */
+			/* CCSGameRules::GoToIntermission, used by dm_basics (upstream cssdm >= 2.1.6 git325).
+			 * linux: vtable slot in the v34 server_i486.so; windows: linux - 1, as the other v34 offsets. */
+			"GoToIntermission"
+			{
+				"windows"		"114"
+				"linux"			"115"
+			}
 			"IPointsForKill"
 			{
 				"windows"		"63"
