@@ -1,0 +1,20 @@
+diff --git a/sdk/smsdk_config.h b/sdk/smsdk_config.h
+index 509e5dd..b742ad8 100644
+--- a/sdk/smsdk_config.h
++++ b/sdk/smsdk_config.h
+@@ -43,7 +43,14 @@
+  * @brief Sets whether or not this plugin required Metamod.
+  * NOTE: Uncomment to enable, comment to disable.
+  */
+-#define SMEXT_CONF_METAMOD		
++#define SMEXT_CONF_METAMOD
++
++/* Metamod 1.10 headers (core and core-legacy) only give SMM_API default visibility for
++ * __GNUC__ == 4; built with -fvisibility=hidden by a newer GCC, CreateInterface stays hidden
++ * and Metamod's dlsym finds vstdlib's instead ("Failed to get API"). */
++#if defined __GNUC__ && !defined SMM_API
++#define SMM_API extern "C" __attribute__ ((visibility("default")))
++#endif
+ 
+ /** Enable interfaces you want to use here by uncommenting lines */
+ #define SMEXT_ENABLE_FORWARDSYS
