@@ -89,6 +89,77 @@ index 68375e6..4596b37 100644
 +		Extension.auto_version(binary)
 +
  Extension.extensions += builder.Add(project)
+diff --git a/buildbot/Versioning b/buildbot/Versioning
+index 5c0485b..1ca810e 100644
+--- a/buildbot/Versioning
++++ b/buildbot/Versioning
+@@ -17,15 +17,21 @@ outputs = [
+   os.path.join(builder.buildFolder, 'includes', 'cssdm_version_auto.h'),
+ ]
+ 
+-with open(os.path.join(builder.sourcePath, '.git', 'HEAD')) as fp:
++# css34: in a submodule .git is a file ("gitdir: <path>") pointing at the real git dir.
++git_dir = os.path.join(builder.sourcePath, '.git')
++if os.path.isfile(git_dir):
++  with open(git_dir) as fp:
++    git_dir = os.path.normpath(os.path.join(builder.sourcePath, fp.read().strip().split(':', 1)[1].strip()))
++
++with open(os.path.join(git_dir, 'HEAD')) as fp:
+   head_contents = fp.read().strip()
+   if re.search('^[a-fA-F0-9]{40}$', head_contents):
+-    git_head_path = os.path.join(builder.sourcePath, '.git', 'HEAD')
++    git_head_path = os.path.join(git_dir, 'HEAD')
+   else:
+     git_state = head_contents.split(':')[1].strip()
+-    git_head_path = os.path.join(builder.sourcePath, '.git', git_state)
++    git_head_path = os.path.join(git_dir, git_state)
+     if not os.path.exists(git_head_path):
+-      git_head_path = os.path.join(builder.sourcePath, '.git', 'HEAD')
++      git_head_path = os.path.join(git_dir, 'HEAD')
+ 
+ sources = [
+   os.path.join(builder.sourcePath, 'product.version'),
+diff --git a/buildbot/generate_headers.py b/buildbot/generate_headers.py
+index 8420e18..b80b7d0 100755
+--- a/buildbot/generate_headers.py
++++ b/buildbot/generate_headers.py
+@@ -12,16 +12,22 @@ if len(argv) < 2:
+ source_dir = os.path.abspath(os.path.normpath(argv[0]))
+ build_dir = os.path.normpath(argv[1])
+ 
++# css34: in a submodule .git is a file ("gitdir: <path>") pointing at the real git dir.
++git_dir = os.path.join(source_dir, '.git')
++if os.path.isfile(git_dir):
++	with open(git_dir) as fp:
++		git_dir = os.path.normpath(os.path.join(source_dir, fp.read().strip().split(':', 1)[1].strip()))
++
+ def GetVersion():
+-	with open(os.path.join(source_dir, '.git', 'HEAD')) as fp:
++	with open(os.path.join(git_dir, 'HEAD')) as fp:
+ 		head_contents = fp.read().strip()
+ 		if re.search(r'^[a-fA-F0-9]{40}$', head_contents):
+-			git_head_path = os.path.join(source_dir, '.git', 'HEAD')
++			git_head_path = os.path.join(git_dir, 'HEAD')
+ 		else:
+ 			git_state = head_contents.split(':')[1].strip()
+-			git_head_path = os.path.join(source_dir, '.git', git_state)
++			git_head_path = os.path.join(git_dir, git_state)
+ 			if not os.path.exists(git_head_path):
+-				git_head_path = os.path.join(source_dir, '.git', 'HEAD')
++				git_head_path = os.path.join(git_dir, 'HEAD')
+ 
+ 	return open(git_head_path, 'r').read().strip();
+ 
+@@ -29,7 +35,8 @@ def PerformReversioning():
+ 	rev = GetVersion()
+ 
+ 	args = ['git', 'rev-list', '--count', 'HEAD']
+-	cset = subprocess.run(args, capture_output=True, text=True).stdout.strip()
++	# css34: run in the cssdm tree, not in the build folder (which may sit in another repo).
++	cset = subprocess.run(args, capture_output=True, text=True, cwd=source_dir).stdout.strip()
+ 
+ 	with open(os.path.join(source_dir, 'product.version'), 'r') as productFile:
+ 		productContents = productFile.read()
 diff --git a/cssdm_config.cpp b/cssdm_config.cpp
 index 2dae187..8636980 100644
 --- a/cssdm_config.cpp

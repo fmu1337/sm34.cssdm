@@ -203,6 +203,9 @@ class CBuilder:
             subprocess.check_call(command, shell=True, env=self.env)
         except:
             raise Exception('[Bootstrap] Could not configure')
+        # AMBuild 2's configure.py prints "Configure failed" but still exits 0.
+        if self.amb2 and not os.path.isfile(os.path.join(self.OUT, '.ambuild2', 'vars')):
+            raise Exception('[Bootstrap] Could not configure (no .ambuild2/vars)')
 
         print('[Bootstrap] Configured')
 
