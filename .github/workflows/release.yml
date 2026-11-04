@@ -1,0 +1,108 @@
+name: Release
+
+# Builds and tests master, then publishes a GitHub release named the way upstream
+# alliedmodders/cssdm names its own: v2.1.6-git<rev> for upstream rev <rev> of the `cssdm`
+# submodule, v2.1.6-git<rev>-r<N> when that rev is rebuilt with changes of ours.
+# Runs when a merge to master changes the submodule or the build inputs, and on dispatch.
+# A commit that already has a release tag is not released again.
+on:
+  push:
+    branches: [master]
+    paths:
+      - cssdm
+      - 'builder/patches/**'
+      - 'builder/run/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skip: ${{ steps.version.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Version
+        id: version
+        run: |
+          set -euo pipefail
+          git -C cssdm fetch --quiet --unshallow 2>/dev/null || git -C cssdm fetch --quiet --depth=1000
+          git fetch --quiet --tags origin
+          released="$(git tag --points-at HEAD 'v*' | head -n1)"
+          if [[ -n "$released" ]]; then
+            echo "::notice::${GITHUB_SHA:0:8} is already released as ${released}"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git tag -l 'v*' > "$RUNNER_TEMP/tags.txt"
+          version="$(python3 builder/scripts/upstream.py version --existing "$RUNNER_TEMP/tags.txt")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::release v${version}"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
+    uses: ./.github/workflows/build.yml
+
+  test:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
+    uses: ./.github/workflows/test-server.yml
+
+  release:
+    needs: [plan, build, test]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cssdm-css34-linux
+          path: dl/sm11
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cssdm-css34-sm13-linux
+          path: dl/sm13
+
+      - name: Publish v${{ env.VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          cp dl/sm11/cssdm-*.tar.gz "assets/cssdm-${VERSION}-css34-linux.tar.gz"
+          cp dl/sm13/cssdm-*.tar.gz "assets/cssdm-${VERSION}-css34-sm13-linux.tar.gz"
+          (cd assets && sha256sum *.tar.gz > SHA256SUMS)
+          upstream="$(git ls-tree HEAD cssdm | awk '{print $3}')"
+          base="${VERSION%-r*}"
+          {
+            echo "CS:S Deathmatch ${VERSION} for CS:S v34."
+            echo
+            echo "| Package | SourceMod |"
+            echo "|---|---|"
+            echo "| \`cssdm-${VERSION}-css34-linux.tar.gz\` | sourcemod-css34 1.11 and 1.12 |"
+            echo "| \`cssdm-${VERSION}-css34-sm13-linux.tar.gz\` | sourcemod-css34 1.13 |"
+            echo
+            echo "Upstream alliedmodders/cssdm \`${upstream:0:8}\` (v${base}), sm34.cssdm \`${GITHUB_SHA:0:8}\`."
+          } > notes.md
+          gh release create "v${VERSION}" assets/* --target "$GITHUB_SHA" \
+            --title "CSSDM ${VERSION} (CS:S v34)" --notes-file notes.md
