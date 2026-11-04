@@ -385,6 +385,24 @@ index fe76bca..339bf13 100644
  	{
  		return nullptr;
  	}
+diff --git a/scripting/dm_basics.sp b/scripting/dm_basics.sp
+index 3d942da..334a90f 100644
+--- a/scripting/dm_basics.sp
++++ b/scripting/dm_basics.sp
+@@ -167,7 +167,13 @@ public void Hook_KillDefuser(int entity)
+ 	}
+ }
+ 
++/* css34: SM 1.11 (6970) declares "bool donated=false", SM 1.12+ "bool donated"; the argument must
++ * match the include it is compiled against. */
++#if SOURCEMOD_V_MAJOR == 1 && SOURCEMOD_V_MINOR <= 11
++public Action CS_OnCSWeaponDrop(int client, int weaponIndex, bool donated = false)
++#else
+ public Action CS_OnCSWeaponDrop(int client, int weaponIndex, bool donated)
++#endif
+ {
+ 	// On CSGO, we handle this under the SDKHook since sometimes this won't
+ 	// get called when a client dies.
 diff --git a/scripting/dm_preset_spawns.sp b/scripting/dm_preset_spawns.sp
 index ca55f47..68fce8c 100644
 --- a/scripting/dm_preset_spawns.sp
