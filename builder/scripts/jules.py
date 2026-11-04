@@ -12,6 +12,8 @@ Same scheme as fmu1337/sourcemod-css34 (builder/scripts/jules.py):
         own PR (fix). Prints {"name": ..., "url": ..., "existing": bool}.
     jules.py wait <session name> [--timeout S] [--interval S] [--out FILE]
         Poll until the session ends (or the timeout), then write a markdown report.
+    jules.py check
+        The API key works and this repository is one of Jules' sources.
 
 Jules never gets a token of this repository, starts from a branch it cannot push to unless
 it opens its own PR, and nothing it produces is merged automatically.
@@ -110,6 +112,21 @@ def source():
     return "sources/github/" + os.environ.get("GITHUB_REPOSITORY", "fmu1337/sm34.cssdm")
 
 
+def check_source():
+    """The API key works and Jules has this repository as a source (GitHub access granted)."""
+    want, token, seen = source(), "", 0
+    while True:
+        page = api("GET", "sources?pageSize=100" + ("&pageToken=" + token if token else ""))
+        names = [s.get("name", "") for s in page.get("sources", [])]
+        seen += len(names)
+        if want in names:
+            return "OK: Jules API key works and {} is a Jules source".format(want)
+        token = page.get("nextPageToken", "")
+        if not token:
+            raise SystemExit("FAIL: the key works ({} sources), but {} is not one: give Jules access to "
+                             "the repository".format(seen, want))
+
+
 def find(title, pages=3):
     """An existing session with exactly this title (the newest pages only), or None."""
     token = ""
@@ -192,8 +209,11 @@ def main():
     p.add_argument("--timeout", type=float, default=2400)
     p.add_argument("--interval", type=float, default=60)
     p.add_argument("--out", type=Path)
+    sub.add_parser("check")
     args = parser.parse_args()
-    if args.cmd == "prompt":
+    if args.cmd == "check":
+        print(check_source())
+    elif args.cmd == "prompt":
         sys.stdout.write(prompt(args.kind, args.old, args.new, args.rev, args.context))
     elif args.cmd == "start":
         print(json.dumps(start(args.title, args.prompt_file.read_text(), args.branch, args.auto_pr,
