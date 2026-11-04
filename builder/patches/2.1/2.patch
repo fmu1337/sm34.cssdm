@@ -385,6 +385,47 @@ index fe76bca..339bf13 100644
  	{
  		return nullptr;
  	}
+diff --git a/scripting/dm_preset_spawns.sp b/scripting/dm_preset_spawns.sp
+index ca55f47..68fce8c 100644
+--- a/scripting/dm_preset_spawns.sp
++++ b/scripting/dm_preset_spawns.sp
+@@ -269,7 +269,8 @@ public Action Command_SpawnMenu(int client, int args)
+ 	return Plugin_Handled;
+ }
+ 
+-public void Panel_VerifyDeleteSpawns(Menu menu, MenuAction action, int param1, int param2)
++/* css34: MenuHandler is int-only before SM 1.12 (typedef, not typeset). */
++public int Panel_VerifyDeleteSpawns(Menu menu, MenuAction action, int param1, int param2)
+ {
+ 	if (action == MenuAction_Select)
+ 	{
+@@ -285,9 +286,11 @@ public void Panel_VerifyDeleteSpawns(Menu menu, MenuAction action, int param1, i
+ 		}
+ 		g_hSpawnMenu.Display(param1, MENU_TIME_FOREVER);
+ 	}
++	return 0;
+ }
+ 
+-public void Menu_EditSpawns(Menu menu, MenuAction action, int param1, int param2)
++/* css34: MenuHandler is int-only before SM 1.12 (typedef, not typeset). */
++public int Menu_EditSpawns(Menu menu, MenuAction action, int param1, int param2)
+ {
+ 	if (action == MenuAction_Select)
+ 	{
+@@ -388,11 +391,12 @@ public void Menu_EditSpawns(Menu menu, MenuAction action, int param1, int param2
+ 			panel.DrawItem("No");
+ 			panel.Send(param1, Panel_VerifyDeleteSpawns, MENU_TIME_FOREVER);
+ 			delete panel;
+-			return;
++			return 0;
+ 		}
+ 		/* Redraw the menu */
+ 		g_hSpawnMenu.Display(param1, MENU_TIME_FOREVER);
+ 	}
++	return 0;
+ }
+ 
+ public void DM_OnStartup()
 diff --git a/sdk/smsdk_config.h b/sdk/smsdk_config.h
 index 509e5dd..b920c6f 100644
 --- a/sdk/smsdk_config.h
