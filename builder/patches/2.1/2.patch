@@ -371,6 +371,20 @@ index 9189906..d7f71af 100644
  
  std::list<ICallWrapper *> g_CallWrappers;
  ICallWrapper *g_pRoundRespawn = NULL;
+diff --git a/cssdm_weapons.cpp b/cssdm_weapons.cpp
+index fe76bca..339bf13 100644
+--- a/cssdm_weapons.cpp
++++ b/cssdm_weapons.cpp
+@@ -44,7 +44,8 @@ std::string DM_StringToLower(std::string string)
+ 
+ dm_weapon_t* DM_FindWeapon(std::string_view name)
+ {
+-	if (!g_WeaponLookup.contains(name.data()))
++	/* css34: built as C++17 for the episode1 SDK; unordered_map::contains is C++20. */
++	if (g_WeaponLookup.find(name.data()) == g_WeaponLookup.end())
+ 	{
+ 		return nullptr;
+ 	}
 diff --git a/sdk/smsdk_config.h b/sdk/smsdk_config.h
 index 509e5dd..b920c6f 100644
 --- a/sdk/smsdk_config.h
