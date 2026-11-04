@@ -121,9 +121,6 @@ jobs:
       CSSDM_SM_LINE: ${{ matrix.line }}
       # sm12/sm13 test the packages that line-sm12-latest / line-sm13-latest point at
       # (builder/run/css34_line.py).
-      # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
-      # (also on master's build; the old checks never matched it). Warn there, fail on sm12/sm13.
-      CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line != 'sm11' && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
