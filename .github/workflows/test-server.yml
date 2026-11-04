@@ -119,9 +119,8 @@ jobs:
         line: [sm11, sm12, sm13]
     env:
       CSSDM_SM_LINE: ${{ matrix.line }}
-      # css34 release packages under test (sm12/sm13); the harness comes from the SM 1.13 tag.
-      SM_RELEASE_TAG: ${{ matrix.line == 'sm12' && '1.12.0.7257-mm1.12.0-r2' || '1.13.0.7478-mm1.12.0-r3' }}
-      HARNESS_REF: 1.13.0.7478-mm1.12.0-r3
+      # sm12/sm13 test the packages that line-sm12-latest / line-sm13-latest point at
+      # (builder/run/css34_line.py).
       # sm11: cssdm.ext.1.ep1.so reports "Failed to get API" on rom4s SM 1.11 / MM 1.10.6
       # (also on master's build; the old checks never matched it). Warn there, fail on sm12/sm13.
       CSSDM_REQUIRE_EXT_LOAD: ${{ matrix.line != 'sm11' && '1' || '0' }}
@@ -135,12 +134,19 @@ jobs:
           name: cssdm-css34-linux-for-test-${{ matrix.line }}
           path: packages
 
+      # The pointer's git tag is not moved with the release, so the harness comes from the
+      # release tag named in line-sm13-latest's lines.json. It also drives sm11 and sm12.
+      - name: Resolve harness tag
+        id: harness
+        run: |
+          eval "$(python3 builder/run/css34_line.py sm13 .ci-css34-harness)"
+          echo "ref=${CSS34_TAG}" >>"$GITHUB_OUTPUT"
+
       - name: Checkout sourcemod-css34 testing harness
         uses: actions/checkout@v4
         with:
           repository: fmu1337/sourcemod-css34
-          # The harness as of the SM 1.13 r3 release; it also drives the sm11 and sm12 runs.
-          ref: ${{ env.HARNESS_REF }}
+          ref: ${{ steps.harness.outputs.ref }}
           path: .ci-vendor/sourcemod-css34
 
       - name: Install host 32-bit runtime + tools
@@ -168,6 +174,11 @@ jobs:
           MIN_ROUND_START: "1"
           MIN_ROUND_END: "1"
           MIN_PLAYER_DEATH: "3"
+          # With DM on, bots respawn already equipped by dm_equipment and rarely buy, so the
+          # harness's cstrike buy/price detour counters are luck (0..8 per 180 s on SM 1.12 and
+          # 1.13 alike; 120-210 with cssdm_enabled 0). Those detours are covered by the fork's CI.
+          MIN_CS_BUY: "0"
+          MIN_CS_PRICE: "0"
         run: |
           chmod +x testing/scripts/*.sh .ci-vendor/sourcemod-css34/testing/scripts/*.sh
           CSSDM_PACKAGE="$(ls packages/cssdm-*-css34-*linux.tar.gz | head -n1)"
