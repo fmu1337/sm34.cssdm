@@ -1,5 +1,5 @@
 {
-  "_comment": "Metamod + SourceMod builds for the CSS:DM compatibility table (testing/scripts/compat-smoke.sh). \"pointer\" entries follow the fork's line-* pointer releases (testing/scripts/compat-builds.py); entries with \"local\" are not downloadable and only run where the file is present (FEX host).",
+  "_comment": "Metamod + SourceMod builds for the CSS:DM compatibility table (testing/scripts/compat-smoke.sh): the fmu1337/sourcemod-css34 lines, followed through their line-* pointer releases (testing/scripts/compat-builds.py). An entry with \"local\" (an archive name instead of mm/sm/pointer) only runs where that file is present.",
   "builds": [
     {
       "id": "css34-sm113",
@@ -28,70 +28,6 @@
       "label": "SM 1.11 + MM 1.10.7",
       "pointer": "sm11",
       "mm_asset": "mmsource-legacy"
-    },
-    {
-      "id": "myarena-sm111",
-      "group": "MyArena",
-      "label": "SM 1.11.0.6541 + MM 1.11.0-dev+1130 (MyArena)",
-      "local": "mms-1.11.0-1130_sourcemod-1.11.0-6522-css_v34-linux-up-git6541-10.05.2020-fix-gamedata-12.10.2020.zip"
-    },
-    {
-      "id": "myarena-sm19",
-      "group": "MyArena",
-      "label": "SM 1.9.0.6189 + MM (MyArena)",
-      "local": "SourceMod_1.9.0.6189_css_v34.zip"
-    },
-    {
-      "id": "rom4s-sm111",
-      "group": "rom4s",
-      "label": "SM 1.11.0.6572 + MM 1.10.6 (rom4s)",
-      "mm": {
-        "url": "https://bitbucket.org/rom4s/mmsdrop-1.10/downloads/mmsource-1.10.6-css34-linux.tar.gz",
-        "sha256": "e1e8a754cc4ee09c02696ae13bf220718801c54da2a04f0ae78317403d1569c7"
-      },
-      "sm": {
-        "url": "https://github.com/rom4s/sourcemod-css34/releases/download/v1.11.0.6572/sourcemod-1.11.0-git6572-css34-linux.tar.gz",
-        "sha256": "54aa0060bfe38d810e50decad843f9a31b7ff76d9cdba90e33f4b639f090ee41"
-      }
-    },
-    {
-      "id": "rom4s-sm110",
-      "group": "rom4s",
-      "label": "SM 1.10.0.6490 + MM 1.10.6 (rom4s)",
-      "mm": {
-        "url": "https://bitbucket.org/rom4s/mmsdrop-1.10/downloads/mmsource-1.10.6-css34-linux.tar.gz",
-        "sha256": "e1e8a754cc4ee09c02696ae13bf220718801c54da2a04f0ae78317403d1569c7"
-      },
-      "sm": {
-        "url": "https://github.com/rom4s/sourcemod-css34/releases/download/v1.10.0.6490/sourcemod-1.10.0-git6490-css34-linux.tar.gz",
-        "sha256": "5b90526457a534e8149f6016908e35a100d65701e75eac18e015a68448416890"
-      }
-    },
-    {
-      "id": "rom4s-sm19",
-      "group": "rom4s",
-      "label": "SM 1.9.0.6224 + MM 1.10.6 (rom4s)",
-      "mm": {
-        "url": "https://bitbucket.org/rom4s/mmsdrop-1.10/downloads/mmsource-1.10.6-css34-linux.tar.gz",
-        "sha256": "e1e8a754cc4ee09c02696ae13bf220718801c54da2a04f0ae78317403d1569c7"
-      },
-      "sm": {
-        "url": "https://bitbucket.org/_4/smdrop-1.9/downloads/sourcemod-1.9.0-git6224-linux.tar.gz",
-        "sha256": "1eb859989ae79fe2437b11f4de5b1ec3aff6b35b108b0d81ca02ac306dde4553"
-      }
-    },
-    {
-      "id": "rom4s-sm16",
-      "group": "rom4s",
-      "label": "SM 1.6.4 + MM 1.10.6 (rom4s)",
-      "mm": {
-        "url": "https://bitbucket.org/rom4s/mmsdrop-1.10/downloads/mmsource-1.10.6-css34-linux.tar.gz",
-        "sha256": "e1e8a754cc4ee09c02696ae13bf220718801c54da2a04f0ae78317403d1569c7"
-      },
-      "sm": {
-        "url": "https://bitbucket.org/_4/smdrop-1.6/downloads/sourcemod-1.6.4-stable-git4626-css34-linux.tar.gz",
-        "sha256": "df73b5764822d22305c622f1d6f5b7519fdab06da52034b04902cc0ac613fca3"
-      }
     }
   ]
 }

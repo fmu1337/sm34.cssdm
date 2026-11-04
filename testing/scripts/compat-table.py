@@ -12,15 +12,12 @@ import re
 import sys
 
 DM_PLUGINS = 5
-CSSDM_ORDER = ['none', 'sm11', 'sm11fix', 'sm12', 'sm13', 'myarena19', 'myarena111']
+CSSDM_ORDER = ['none', 'sm11', 'sm12', 'sm13']
 CSSDM_TITLES = {
     'none': 'no cssdm (SM itself)',
     'sm11': 'cssdm sm11 (API 8, 1.ep1+2.ep1)',
-    'sm11fix': 'cssdm sm11 fixed (PR #8, API 8)',
     'sm12': 'cssdm sm12 (API 8, 2.ep1)',
     'sm13': 'cssdm sm13 (API 11, 2.ep1)',
-    'myarena19': 'cssdm.ext from MyArena SM 1.9 (2018)',
-    'myarena111': 'cssdm.ext + gamedata from MyArena SM 1.11 (2022)',
 }
 
 
@@ -69,7 +66,7 @@ def parse(args):
 
     plugins = section(text, 'COMPAT_PLUGINS_BEGIN', 'COMPAT_LISTS_END')
     r['dm_running'] = len(re.findall(r'^\s*\d+ "CS:S DM', plugins, re.M))
-    r['dm_failed'] = len(re.findall(r'<(?:Failed|Error)> "CS:S DM', plugins))
+    r['dm_failed'] = len(re.findall(r'<(?:Failed|Error|Bad Load)> (?:"CS:S DM|cssdm/)', plugins))
     errs = re.findall(r'cssdm/(\w+)\.smx[^:\n]*: ([^\n]+)', plugins)
     r['dm_errors'] = sorted(set(e for _, e in errs))[:3]
 

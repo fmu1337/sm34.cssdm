@@ -142,7 +142,11 @@ class CBuilder:
         patch_set = LINE_PATCHES[self.args.sm_line]
         line_dir = os.path.join(self.patches_dir, patch_set, self.src_branch)
         line_patches = sorted(f for f in os.listdir(line_dir) if f.endswith('.patch')) if os.path.isdir(line_dir) else []
-        if not line_patches:
+        # A config entry can opt out: the base patch for the AMBuild 2 upstream handles every line itself.
+        if not self.config.get('line_patches', True):
+            print('[Patch] No line patches for this config')
+            line_patches = []
+        elif not line_patches:
             raise Exception('[Patch] No patches for line <{0}> in {1}'.format(self.args.sm_line, line_dir))
         for name in line_patches:
             print('[Patch] Applying {0}/{1}/{2}'.format(patch_set, self.src_branch, name))
@@ -172,6 +176,19 @@ class CBuilder:
         if args.hl2sdk_ep1:
             self.env['HL2SDKEP1'] = args.hl2sdk_ep1
 
+        # Upstream cssdm >= git325 uses AMBuild 2 + hl2sdk-manifests (AMBuilder at the top level).
+        self.amb2 = os.path.isfile(os.path.join(self.source_dir, 'AMBuilder'))
+        if self.amb2:
+            conf_argv += ['--targets', 'x86', '--sdks', 'episode1']
+            if args.mms_path:
+                conf_argv += ['--mms-path', args.mms_path]
+            if args.sm_path:
+                conf_argv += ['--sm-path', args.sm_path]
+            if args.sm_bin_path:
+                conf_argv += ['--sm-bin-path', args.sm_bin_path]
+            if args.hl2sdk_ep1:
+                self.env['HL2SDKEPISODE1'] = args.hl2sdk_ep1
+
         conf_argv = ' '.join(conf_argv)
         py = sys.executable or 'python3'
         command = ('' if sys.platform.startswith('win') else 'CC={0} CXX={1} '.format(args.cc or self.config['CC'], args.cxx or self.config['CXX'])) + '{0} {1} {2}'.format(py, os.path.join(self.source_dir, 'configure.py'), conf_argv)
@@ -186,6 +203,9 @@ class CBuilder:
             subprocess.check_call(command, shell=True, env=self.env)
         except:
             raise Exception('[Bootstrap] Could not configure')
+        # AMBuild 2's configure.py prints "Configure failed" but still exits 0.
+        if self.amb2 and not os.path.isfile(os.path.join(self.OUT, '.ambuild2', 'vars')):
+            raise Exception('[Bootstrap] Could not configure (no .ambuild2/vars)')
 
         print('[Bootstrap] Configured')
 
@@ -194,7 +214,10 @@ class CBuilder:
 
         try:
             py = sys.executable or 'python3'
-            subprocess.check_call('{0} build.py'.format(py), shell=True, env=self.env)
+            if self.amb2:
+                subprocess.check_call('{0} -c "import sys; from ambuild2 import run; sys.exit(run.cli_run())"'.format(py), shell=True, env=self.env)
+            else:
+                subprocess.check_call('{0} build.py'.format(py), shell=True, env=self.env)
         except:
             raise Exception('[Build] Failed')
 

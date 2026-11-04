@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # Run CSS:DM compatibility cells outside GitHub Actions, e.g. on the ARM host under FEX
 # (SRCDS_PREFIX=FEX plus the FEX_* variables). Covers the "local" builds of
-# testing/compat/sm-builds.json and the MyArena cssdm extensions, which are not published.
+# testing/compat/sm-builds.json (incl. "local" archives, which are not downloadable).
 #
 #   SERVER_DIR  CS:S v34 tree; its cstrike/addons is replaced for every cell
 #   PKG_DIR     sm11/sm12/sm13.tar.gz (CSS:DM packages from a Build run), the "local" archives
-#               named in sm-builds.json, optional myarena19-cssdm.ext.2.ep1.so,
-#               myarena111-cssdm.ext.2.ep1.so + myarena111-cssdm.games.txt;
+#               named in sm-builds.json;
 #               downloaded MM/SM archives are cached here
 #   BUILDS      build ids to run (default: all whose archives are available)
-#   CSSDM       variants to run (default: none, the sm11/sm12/sm13 packages present and the MyArena ones)
+#   CSSDM       variants to run (default: none and the sm11/sm12/sm13 packages present)
 #   RESULTS     JSON lines file (default: $PKG_DIR/../out/local.jsonl)
 set -euo pipefail
 
@@ -21,8 +20,6 @@ mkdir -p "$(dirname "${RESULTS}")"
 if [[ -z "${CSSDM:-}" ]]; then
   CSSDM="none"
   for v in sm11 sm12 sm13; do [[ -f "${PKG_DIR}/${v}.tar.gz" ]] && CSSDM+=" ${v}"; done
-  [[ -f "${PKG_DIR}/myarena19-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena19"
-  [[ -f "${PKG_DIR}/myarena111-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena111"
 fi
 
 # id, label, local file, mm url, mm sha, sm url, sm sha; split on \x1f, which (unlike a tab)
@@ -56,12 +53,6 @@ for row in "${rows[@]}"; do
   fi
   for v in ${CSSDM}; do
     ext="" gamedata="" pkg="${PKG_DIR}/${v}.tar.gz"
-    case "${v}" in
-      myarena19) pkg="${PKG_DIR}/sm11.tar.gz" ext="${PKG_DIR}/myarena19-cssdm.ext.2.ep1.so" ;;
-      myarena111)
-        pkg="${PKG_DIR}/sm11.tar.gz" ext="${PKG_DIR}/myarena111-cssdm.ext.2.ep1.so"
-        gamedata="${PKG_DIR}/myarena111-cssdm.games.txt" ;;
-    esac
     SM_ID="${id}" SM_LABEL="${label}" SM_PACKAGE="${sm_pkg}" MM_PACKAGE="${mm_pkg}" \
       CSSDM_ID="${v}" CSSDM_PACKAGE="${pkg}" CSSDM_EXT="${ext}" CSSDM_GAMEDATA="${gamedata}" \
       RESULTS="${RESULTS}" bash "${ROOT}/testing/scripts/compat-smoke.sh" || echo "cell ${id}/${v} failed to run"
