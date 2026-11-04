@@ -7,7 +7,7 @@
 #   SM_ID, SM_LABEL build id/label from testing/compat/sm-builds.json
 #   SM_PACKAGE      SourceMod archive (.tar.gz or .zip; may also contain Metamod)
 #   MM_PACKAGE      Metamod archive (optional when SM_PACKAGE ships Metamod)
-#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena111; "none" = SM alone)
+#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13; "none" = SM alone)
 #   CSSDM_PACKAGE   cssdm-*-css34-*linux.tar.gz (plugins, gamedata, cfg, extension)
 #   CSSDM_EXT       optional cssdm.ext.2.ep1.so that replaces the package's extensions
 #   CSSDM_GAMEDATA  optional cssdm.games.txt that replaces the package's gamedata
@@ -52,7 +52,7 @@ fi
 sed -i 's/"AutoUpdate"[[:space:]]*"yes"/"AutoUpdate"\t\t"no"/' \
   "${cs}/addons/sourcemod/configs/core.cfg" 2>/dev/null || true
 
-# CSS:DM from the package; an SM package's own cssdm.ext (MyArena) is removed or replaced too.
+# CSS:DM from the package; any cssdm.ext an SM package ships is removed or replaced too.
 rm -f "${cs}"/addons/sourcemod/extensions/cssdm.ext.*.so "${cs}"/addons/sourcemod/gamedata/cssdm.games.txt
 if [[ "${CSSDM_ID}" != none ]]; then
   tar -xzf "${CSSDM_PACKAGE}" -C "${cs}"

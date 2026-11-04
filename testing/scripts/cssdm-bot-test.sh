@@ -11,8 +11,8 @@ RECORD_SECS="${RECORD_SECS:-180}"
 RUN_BOTPLAY="${RUN_BOTPLAY:-1}"
 APPLY_SRCDS_PATCH="${APPLY_SRCDS_PATCH:-1}"
 APPLY_VALVE_RC="${APPLY_VALVE_RC:-1}"
-# sm11: rom4s SM 1.11.0.6572 / MM 1.10.6 baseline. sm12, sm13: the packages that
-# fmu1337/sourcemod-css34 line-sm12-latest / line-sm13-latest point at (builder/run/css34_line.py).
+# sm11 / sm12 / sm13: the MM + SM packages that fmu1337/sourcemod-css34 line-sm11-oldstable /
+# line-sm12-latest / line-sm13-latest point at (builder/run/css34_line.py).
 CSSDM_SM_LINE="${CSSDM_SM_LINE:-sm11}"
 # 1: the smoke fails unless cssdm.ext and the DM plugins are running.
 CSSDM_REQUIRE_EXT_LOAD="${CSSDM_REQUIRE_EXT_LOAD:-1}"
@@ -67,14 +67,7 @@ if [[ ! -x "${SERVER_DIR}/srcds_i686" && ! -x "${SERVER_DIR}/srcds_i486" ]]; the
 fi
 
 case "${CSSDM_SM_LINE}" in
-  sm11)
-    # Install rom4s reference MM+SM (same baseline botplay uses), then CSS:DM.
-    export BOTPLAY_PROFILE=rom4s
-    unset MM_PACKAGE SM_PACKAGE USE_BUILT_MM BUILT_MM_DIR BUILT_MM_PACKAGE || true
-    DEFAULT_MM_VERSION_EXPECT="1.10.6"
-    DEFAULT_SM_VERSION_EXPECT="1.11.0.6572"
-    ;;
-  sm12|sm13)
+  sm11|sm12|sm13)
     # Install the MM + SM packages of the line's css34 pointer release (checksum-verified),
     # then CSS:DM.
     eval "$(python3 "${ROOT}/builder/run/css34_line.py" "${CSSDM_SM_LINE}" \
@@ -103,7 +96,7 @@ export SMOKE_VERBOSE="${SMOKE_VERBOSE:-1}"
 export SMOKE_CONDEBUG="${SMOKE_CONDEBUG:-1}"
 export MM_VERSION_EXPECT="${MM_VERSION_EXPECT:-${DEFAULT_MM_VERSION_EXPECT}}"
 export SM_VERSION_EXPECT="${SM_VERSION_EXPECT:-${DEFAULT_SM_VERSION_EXPECT}}"
-# Skip CSS34 pack commit pin: we use published rom4s packages, not this repo's pack stamp.
+# Skip the harness's own pack / commit pins: the packages come from the line's pointer release.
 unset CSS34_PACK_COMMIT_EXPECT || true
 unset MM_COMMIT_EXPECT SM_COMMIT_EXPECT || true
 
@@ -134,19 +127,10 @@ export SMOKE_VERBOSE SMOKE_CONDEBUG
 
 echo "Running CSS:DM console probe (${TIMEOUT_SECS}s)..."
 /usr/bin/expect "${SM_CSS34_ROOT}/testing/scripts/console-probe.exp" >"${LOG_FILE}" 2>&1 || {
-  # The harness probe fails when dbi.pgsql.ext cannot load; the rom4s SM 1.11.0.6572
-  # package does not ship it. Tolerate exactly that on sm11 if the probe ran to the end.
-  if [[ "${CSSDM_SM_LINE}" == "sm11" ]] &&
-    grep -Eq 'dbi\.pgsql\.ext\.so failed to load: .*No such file' "${CONSOLE_PROBE_LOG}" &&
-    grep -Eq '\[SM\] Listing [0-9]+ plugins' "${CONSOLE_PROBE_LOG}" &&
-    ! grep -Eq 'timeout waiting|exited (before|while)' "${LOG_FILE}"; then
-    echo "WARN: console probe failed only because the rom4s SM 1.11 package has no dbi.pgsql.ext"
-  else
-    echo "Console probe failed (see ${LOG_FILE})" >&2
-    tail -n 160 "${LOG_FILE}" >&2 || true
-    tail -n 160 "${CONSOLE_PROBE_LOG}" >&2 || true
-    exit 1
-  fi
+  echo "Console probe failed (see ${LOG_FILE})" >&2
+  tail -n 160 "${LOG_FILE}" >&2 || true
+  tail -n 160 "${CONSOLE_PROBE_LOG}" >&2 || true
+  exit 1
 }
 
 fail=0

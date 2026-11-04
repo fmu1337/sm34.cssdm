@@ -8,10 +8,10 @@
 
 | Пакет | SourceMod |
 |---|---|
-| `cssdm-css34-linux` | SM 1.10 и новее, до 1.12: наш [sourcemod-css34](https://github.com/fmu1337/sourcemod-css34) 1.11/1.12, SM от [rom4s](https://github.com/rom4s/sourcemod-css34), MyArena 1.11. Оба ядра (`1.ep1` и `2.ep1`) |
+| `cssdm-css34-linux` | наш [sourcemod-css34](https://github.com/fmu1337/sourcemod-css34) 1.11 и 1.12, оба ядра (`1.ep1` и `2.ep1`) |
 | `cssdm-css34-sm13-linux` | отдельная версия для SM 1.13 (наш sourcemod-css34) |
 
-На SM 1.9 и старше cssdm не работает. `cssdm-css34-sm12-linux` тоже собирается, но для SM 1.12 достаточно `cssdm-css34-linux`.
+Другие сборки SourceMod не поддерживаются. `cssdm-css34-sm12-linux` тоже собирается, но для SM 1.12 достаточно `cssdm-css34-linux`.
 
 ## Сборка
 
