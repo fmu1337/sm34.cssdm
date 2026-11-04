@@ -6,6 +6,8 @@ on:
       - master
       - 'cursor/**'
   pull_request:
+  # release.yml runs this before publishing.
+  workflow_call:
   workflow_dispatch:
     inputs:
       record_secs:

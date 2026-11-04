@@ -1,33 +1,22 @@
-# sm34.cssdm — CS:S DM для Counter-Strike: Source v34
+# sm34.cssdm
 
-Сборка [CS:S Deathmatch](https://github.com/alliedmodders/cssdm) (CSS:DM) под **CS:S v34**. Исходники — сабмодуль `cssdm`, поверх накладываются патчи из `builder/patches/`.
+CS:S Deathmatch (cssdm) для Counter-Strike: Source v34 и нашего sourcemod-css34.
 
-## Какой пакет ставить
+## Что ставить
 
-Пакеты — артефакты workflow `Build` на `master`:
+Готовые пакеты лежат в релизах:
 
-| Пакет | SourceMod |
-|---|---|
-| `cssdm-css34-linux` | наш [sourcemod-css34](https://github.com/fmu1337/sourcemod-css34) 1.11 и 1.12, оба ядра (`1.ep1` и `2.ep1`) |
-| `cssdm-css34-sm13-linux` | отдельная версия для SM 1.13 (наш sourcemod-css34) |
+- SourceMod 1.11 и 1.12: `cssdm-<версия>-css34-linux.tar.gz`
+- SourceMod 1.13: `cssdm-<версия>-css34-sm13-linux.tar.gz`
 
-Другие сборки SourceMod не поддерживаются. `cssdm-css34-sm12-linux` тоже собирается, но для SM 1.12 достаточно `cssdm-css34-linux`.
+Другие сборки SourceMod не поддерживаются.
 
-## Сборка
+## Версии
 
-```bash
-git submodule update --init --recursive
-export CSSDM_SM_LINE=sm13 DEPS_DIR=$HOME CC=gcc CXX=g++   # sm11 / sm12 / sm13
-bash builder/run/checkout-deps.sh
-builder/run/linux.sh   # → OUT/package/cssdm-<ver>-git<N>-css34-sm13-linux.tar.gz
-```
+Версии такие же, как у upstream cssdm: `2.1.6-git325` собран из ревизии 325 upstream. Если та же ревизия пересобрана с нашими правками, добавляется `-r2`, `-r3` и так далее.
 
-SourceMod/Metamod для sm12/sm13 берутся из релизов-указателей форка `line-sm12-latest` / `line-sm13-latest`.
-
-## CI
-
-`Build` собирает пакеты, `Test Server` поднимает CS:S v34 и проверяет, что `cssdm.ext` и DM-плагины загрузились, `Compat` прогоняет пакеты по разным сборкам SourceMod.
+Раз в неделю бот проверяет upstream и, если там есть новые коммиты, открывает PR с обновлением. После мёржа выходит новый релиз.
 
 ## Лицензия
 
-GPL-2.0 (см. `LICENSE`). CSS:DM © AlliedModders LLC.
+GPL-2.0, см. `LICENSE`. CSS:DM © AlliedModders LLC.
