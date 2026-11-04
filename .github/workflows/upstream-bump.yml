@@ -20,6 +20,11 @@ on:
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
+    inputs:
+      check_setup:
+        description: "Only check the App installation and the Jules key / repository access"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,7 +34,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  setup:
+    if: inputs.check_setup
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: App token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BUMP_APP_ID }}
+          private-key: ${{ secrets.BUMP_APP_KEY }}
+
+      - name: The App is installed on this repository
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          set -euo pipefail
+          repos="$(gh api installation/repositories --jq '.repositories[].full_name')"
+          echo "$repos"
+          grep -qx "${GITHUB_REPOSITORY}" <<<"$repos"
+          echo "OK: the bump App can act on ${GITHUB_REPOSITORY}"
+
+      - name: Jules key and repository access
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        run: python3 builder/scripts/jules.py check
+
   plan:
+    if: ${{ !inputs.check_setup }}
     runs-on: ubuntu-22.04
     outputs:
       behind: ${{ steps.plan.outputs.behind }}
