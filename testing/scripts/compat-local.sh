@@ -5,8 +5,8 @@
 #
 #   SERVER_DIR  CS:S v34 tree; its cstrike/addons is replaced for every cell
 #   PKG_DIR     sm11/sm12/sm13.tar.gz (CSS:DM packages from a Build run), the "local" archives
-#               named in sm-builds.json, optional myarena19-cssdm.ext.2.ep1.so,
-#               myarena111-cssdm.ext.2.ep1.so + myarena111-cssdm.games.txt;
+#               named in sm-builds.json, optional myarena111-cssdm.ext.2.ep1.so +
+#               myarena111-cssdm.games.txt;
 #               downloaded MM/SM archives are cached here
 #   BUILDS      build ids to run (default: all whose archives are available)
 #   CSSDM       variants to run (default: none, the sm11/sm12/sm13 packages present and the MyArena ones)
@@ -21,7 +21,6 @@ mkdir -p "$(dirname "${RESULTS}")"
 if [[ -z "${CSSDM:-}" ]]; then
   CSSDM="none"
   for v in sm11 sm12 sm13; do [[ -f "${PKG_DIR}/${v}.tar.gz" ]] && CSSDM+=" ${v}"; done
-  [[ -f "${PKG_DIR}/myarena19-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena19"
   [[ -f "${PKG_DIR}/myarena111-cssdm.ext.2.ep1.so" ]] && CSSDM+=" myarena111"
 fi
 
@@ -57,7 +56,6 @@ for row in "${rows[@]}"; do
   for v in ${CSSDM}; do
     ext="" gamedata="" pkg="${PKG_DIR}/${v}.tar.gz"
     case "${v}" in
-      myarena19) pkg="${PKG_DIR}/sm11.tar.gz" ext="${PKG_DIR}/myarena19-cssdm.ext.2.ep1.so" ;;
       myarena111)
         pkg="${PKG_DIR}/sm11.tar.gz" ext="${PKG_DIR}/myarena111-cssdm.ext.2.ep1.so"
         gamedata="${PKG_DIR}/myarena111-cssdm.games.txt" ;;

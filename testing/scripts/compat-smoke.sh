@@ -7,7 +7,7 @@
 #   SM_ID, SM_LABEL build id/label from testing/compat/sm-builds.json
 #   SM_PACKAGE      SourceMod archive (.tar.gz or .zip; may also contain Metamod)
 #   MM_PACKAGE      Metamod archive (optional when SM_PACKAGE ships Metamod)
-#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena19, myarena111; "none" = SM alone)
+#   CSSDM_ID        CSS:DM variant id (sm11, sm12, sm13, myarena111; "none" = SM alone)
 #   CSSDM_PACKAGE   cssdm-*-css34-*linux.tar.gz (plugins, gamedata, cfg, extension)
 #   CSSDM_EXT       optional cssdm.ext.2.ep1.so that replaces the package's extensions
 #   CSSDM_GAMEDATA  optional cssdm.games.txt that replaces the package's gamedata

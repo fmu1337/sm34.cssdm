@@ -12,14 +12,12 @@ import re
 import sys
 
 DM_PLUGINS = 5
-CSSDM_ORDER = ['none', 'sm11', 'sm11fix', 'sm12', 'sm13', 'myarena19', 'myarena111']
+CSSDM_ORDER = ['none', 'sm11', 'sm12', 'sm13', 'myarena111']
 CSSDM_TITLES = {
     'none': 'no cssdm (SM itself)',
     'sm11': 'cssdm sm11 (API 8, 1.ep1+2.ep1)',
-    'sm11fix': 'cssdm sm11 fixed (PR #8, API 8)',
     'sm12': 'cssdm sm12 (API 8, 2.ep1)',
     'sm13': 'cssdm sm13 (API 11, 2.ep1)',
-    'myarena19': 'cssdm.ext from MyArena SM 1.9 (2018)',
     'myarena111': 'cssdm.ext + gamedata from MyArena SM 1.11 (2022)',
 }
 
