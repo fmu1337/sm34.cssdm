@@ -32,8 +32,9 @@
 			}
 			/* Virtual indexes */
 			/* CCSGameRules::GoToIntermission, for dm_basics' cssdm_force_mapchanges 2 (upstream git325).
-			 * linux: its vtable slot in the v34 server_i486.so (symbols + relocations). No windows value:
-			 * these packages are Linux-only and it was not verified there. */
+			 * linux: its vtable slot in the v34 server_i486.so (symbols + relocations); checked on a server:
+			 * with mp_timelimit 1 the call prints "Going to intermission..." and the map changes. No windows
+			 * value: these packages are Linux-only and it was not verified there. */
 			"GoToIntermission"
 			{
 				"linux"			"115"
