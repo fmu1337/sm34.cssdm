@@ -386,17 +386,17 @@ index fe76bca..339bf13 100644
  		return nullptr;
  	}
 diff --git a/scripting/dm_basics.sp b/scripting/dm_basics.sp
-index 3d942da..334a90f 100644
+index 3d942da..ababd4f 100644
 --- a/scripting/dm_basics.sp
 +++ b/scripting/dm_basics.sp
 @@ -167,7 +167,13 @@ public void Hook_KillDefuser(int entity)
  	}
  }
  
-+/* css34: SM 1.11 (6970) declares "bool donated=false", SM 1.12+ "bool donated"; the argument must
-+ * match the include it is compiled against. */
++/* css34: spcomp 1.11 accepts neither form of SM 1.11.0.6970's "bool donated=false" (errors 059 and
++ * 181), only the two-argument one; donated is unused here, and SM 1.12+ needs the three. */
 +#if SOURCEMOD_V_MAJOR == 1 && SOURCEMOD_V_MINOR <= 11
-+public Action CS_OnCSWeaponDrop(int client, int weaponIndex, bool donated = false)
++public Action CS_OnCSWeaponDrop(int client, int weaponIndex)
 +#else
  public Action CS_OnCSWeaponDrop(int client, int weaponIndex, bool donated)
 +#endif
@@ -404,7 +404,7 @@ index 3d942da..334a90f 100644
  	// On CSGO, we handle this under the SDKHook since sometimes this won't
  	// get called when a client dies.
 diff --git a/scripting/dm_equipment.sp b/scripting/dm_equipment.sp
-index c8d8b5a..d96350b 100644
+index c8d8b5a..635d56e 100644
 --- a/scripting/dm_equipment.sp
 +++ b/scripting/dm_equipment.sp
 @@ -86,6 +86,27 @@ Cookie g_EquipOption;
@@ -455,7 +455,15 @@ index c8d8b5a..d96350b 100644
  	}
  }
  
-@@ -565,7 +586,7 @@ public int Menu_EquipHandler(Menu menu, MenuAction action, int param1, int param
+@@ -226,6 +247,7 @@ public Action DM_OnClientDeath(int client)
+ 	}
+ 
+ 	g_GunMenuAvailable[client] = true;
++	return Plugin_Continue;
+ }
+ 
+ public void OnClientPutInServer(int client)
+@@ -565,7 +587,7 @@ public int Menu_EquipHandler(Menu menu, MenuAction action, int param1, int param
  		g_GunMenuAvailable[param1] = false;
  		if (!IsFakeClient(param1))
  		{
@@ -464,7 +472,7 @@ index c8d8b5a..d96350b 100644
  		}
  	}
  	else if (action == MenuAction_DisplayItem)
-@@ -606,7 +627,7 @@ public int Menu_PrimaryHandler(Menu menu, MenuAction action, int param1, int par
+@@ -606,7 +628,7 @@ public int Menu_PrimaryHandler(Menu menu, MenuAction action, int param1, int par
  		GivePrimary(param1, param2);
  		if (!IsFakeClient(param1))
  		{
@@ -473,7 +481,7 @@ index c8d8b5a..d96350b 100644
  		}
  	}
  	else if (action == MenuAction_Display)
-@@ -645,7 +666,7 @@ public int Menu_SecondaryHandler(Menu menu, MenuAction action, int param1, int p
+@@ -645,7 +667,7 @@ public int Menu_SecondaryHandler(Menu menu, MenuAction action, int param1, int p
  		GiveSecondary(param1, param2);
  		if (!IsFakeClient(param1))
  		{
