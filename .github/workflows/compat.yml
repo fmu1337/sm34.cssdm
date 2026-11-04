@@ -2,7 +2,7 @@ name: Compat
 
 # CSS:DM compatibility table: every Metamod + SourceMod build in testing/compat/sm-builds.json
 # (except "local" ones) x every CSS:DM package from a master Build run. Each cell boots
-# CS:S v34, checks what loaded and lets bots play; the table job renders docs/COMPAT.md.
+# CS:S v34, checks what loaded and lets bots play; the table job writes the job summary.
 
 on:
   workflow_dispatch:
