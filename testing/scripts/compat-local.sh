@@ -27,17 +27,15 @@ fi
 
 # id, label, local file, mm url, mm sha, sm url, sm sha; split on \x1f, which (unlike a tab)
 # keeps empty fields
-mapfile -t rows < <(python3 - "${ROOT}/testing/compat/sm-builds.json" <<'EOF'
+mapfile -t rows < <(python3 "${ROOT}/testing/scripts/compat-builds.py" "${ROOT}/testing/compat/sm-builds.json" |
+  python3 -c '
 import json, sys
-for b in json.load(open(sys.argv[1]))['builds']:
-    mm, sm = b.get('mm', {}), b.get('sm', {})
-    print('\x1f'.join([b['id'], b['label'], b.get('local', ''), mm.get('url', ''), mm.get('sha256', ''),
-                     sm.get('url', ''), sm.get('sha256', '')]))
-EOF
-)
+for b in json.load(sys.stdin):
+    print("\x1f".join([b["id"], b["label"], b["local"], b.get("mm_url", ""), b.get("mm_sha", ""),
+                         b.get("sm_url", ""), b.get("sm_sha", "")]))')
 
-fetch() {  # url sha -> cached path
-  local out="${PKG_DIR}/dl-$(basename "$1")"
+fetch() {  # url sha cache-name -> cached path
+  local out="${PKG_DIR}/dl-$3"
   [[ -s "${out}" ]] || curl -fsSL --retry 5 --retry-delay 3 -o "${out}" "$1"
   echo "$2  ${out}" | sha256sum -c - >/dev/null
   echo "${out}"
@@ -52,8 +50,9 @@ for row in "${rows[@]}"; do
     [[ -f "${PKG_DIR}/${local_file}" ]] || { echo "skip ${id}: ${local_file} not in PKG_DIR"; continue; }
     sm_pkg="${PKG_DIR}/${local_file}" mm_pkg=""
   else
-    mm_pkg="$(fetch "${mm_url}" "${mm_sha}")"
-    sm_pkg="$(fetch "${sm_url}" "${sm_sha}")"
+    # Pointer releases share file names across lines, so the cache key includes the build id.
+    mm_pkg="$(fetch "${mm_url}" "${mm_sha}" "${id}-mm-$(basename "${mm_url}")")"
+    sm_pkg="$(fetch "${sm_url}" "${sm_sha}" "${id}-sm-$(basename "${sm_url}")")"
   fi
   for v in ${CSSDM}; do
     ext="" gamedata="" pkg="${PKG_DIR}/${v}.tar.gz"

@@ -14,18 +14,18 @@
 | SourceMod | Рабочий CSS:DM |
 |---|---|
 | fmu1337/sourcemod-css34 **1.13** r5 | артефакт `cssdm-css34-sm13-linux` (линия **sm13**) |
-| fmu1337/sourcemod-css34 **1.12** r4 | `cssdm-css34-sm12-linux` (линия **sm12**) или `cssdm-css34-linux` после PR #8 |
-| fmu1337/sourcemod-css34 1.11 dual-r3, с MM 1.12 (ядро `2.ep1`) и с MM 1.10.7 (ядро `1.ep1`) | `cssdm-css34-linux` после PR #8 |
-| MyArena SM 1.11.0.6541 | `cssdm-css34-linux` после PR #8 или его собственный `cssdm.ext` + gamedata |
+| fmu1337/sourcemod-css34 **1.12** r4 | `cssdm-css34-linux` или `cssdm-css34-sm12-linux` (линия **sm12**) |
+| fmu1337/sourcemod-css34 1.11 dual-r3, с MM 1.12 (ядро `2.ep1`) и с MM 1.10.7 (ядро `1.ep1`) | `cssdm-css34-linux` |
+| MyArena SM 1.11.0.6541 | `cssdm-css34-linux` или его собственный `cssdm.ext` + gamedata |
 | MyArena SM 1.9.0.6189 | полностью — ничего: его `cssdm.ext` (2018) грузится, но наши плагины собраны новым spcomp и на SM 1.9 не стартуют; наш ext даёт `ISourceMod` |
-| rom4s 1.11 / 1.10 (MM 1.10.6, ядро `1.ep1`) | `cssdm-css34-linux` после PR #8 |
+| rom4s 1.11 / 1.10 (MM 1.10.6, ядро `1.ep1`) | `cssdm-css34-linux` |
 | rom4s 1.9 (MM 1.10.6) | ничего: `Could not find interface: ISourceMod` (cssdm собран с заголовками SM 1.10) |
 | rom4s SM 1.6.4 | ничего: сам SM работает, но с любым cssdm сервер падает |
 
 ## Что выяснилось
 
-1. **Артефакт `cssdm-css34-linux` (линия sm11) в `master` не работает нигде; исправлен в PR #8.** С исправлением он работает на SM 1.10–1.12 с обоими ядрами (наши, rom4s, MyArena 1.11), но не на SM 1.9 и 1.6.4. Без исправления и `cssdm.ext.1.ep1.so`, и `cssdm.ext.2.ep1.so` дают `Failed to get API` на всех сборках. Это ошибка загрузчика Metamod, а не проверка версии API в SourceMod: в заголовках MM 1.10 `SMM_API` получает `visibility("default")` только при `__GNUC__ == 4`, поэтому при сборке GCC 11 с `-fvisibility=hidden` функция `CreateInterface` из cssdm скрыта, и Metamod находит одноимённую функцию из `vstdlib`. Старый Test Server её не ловил: он искал `cssdm.ext.*<FAILED>`, а SM печатает `<FAILED> file "cssdm.ext…"`. С PR #3 проверка исправлена.
-2. **Под ядро `1.ep1` есть только `cssdm-css34-linux`** (после PR #8). Сборки sm12/sm13 и обе сборки MyArena есть только для `2.ep1`: SM ищет `cssdm.ext.1.ep1.so` или `cssdm.ext.so` и не находит их.
+1. **Артефакт `cssdm-css34-linux` (линия sm11) до PR #8 не работал нигде.** С исправлением он работает на SM 1.10–1.12 с обоими ядрами (наши, rom4s, MyArena 1.11), но не на SM 1.9 и 1.6.4. Без исправления и `cssdm.ext.1.ep1.so`, и `cssdm.ext.2.ep1.so` дают `Failed to get API` на всех сборках. Это ошибка загрузчика Metamod, а не проверка версии API в SourceMod: в заголовках MM 1.10 `SMM_API` получает `visibility("default")` только при `__GNUC__ == 4`, поэтому при сборке GCC 11 с `-fvisibility=hidden` функция `CreateInterface` из cssdm скрыта, и Metamod находит одноимённую функцию из `vstdlib`. Старый Test Server её не ловил: он искал `cssdm.ext.*<FAILED>`, а SM печатает `<FAILED> file "cssdm.ext…"`. С PR #3 проверка исправлена.
+2. **Под ядро `1.ep1` есть только `cssdm-css34-linux`.** Сборки sm12/sm13 и обе сборки MyArena есть только для `2.ep1`: SM ищет `cssdm.ext.1.ep1.so` или `cssdm.ext.so` и не находит их.
 3. **`cssdm.ext` из MyArena SM 1.9 (2018) роняет сервер** (SIGSEGV сразу после смены карты) на SM 1.11/1.12 с MM 1.12 и на MyArena SM 1.11.
 4. **`cssdm.ext` из MyArena SM 1.11 (2022)** работает на всех сборках с ядром `2.ep1` и API ≤ 8 (наш 1.12, наш 1.11 + MM 1.12, MyArena 1.11), но только со своим `cssdm.games.txt`. Его gamedata отличается от нашего (другие оффсеты, лишний патч `TakeDmgPatch2`).
 5. Сборки с API 8 (sm11, sm12, обе MyArena) на SM 1.13 не грузятся (`too old to load (8, max is 9)`), sm13 (API 11) — на SM ≤ 1.12 (`too new`). Это ожидаемо.

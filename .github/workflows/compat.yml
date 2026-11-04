@@ -29,27 +29,23 @@ concurrency:
   group: compat-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  HARNESS_REF: 1.13.0.7478-mm1.12.0-r5
-
 jobs:
   setup:
     runs-on: ubuntu-22.04
     outputs:
       builds: ${{ steps.matrix.outputs.builds }}
+      harness: ${{ steps.matrix.outputs.harness }}
     steps:
       - uses: actions/checkout@v4
 
+      # Our builds follow the fork's line-* pointers; the harness is the release tag that
+      # line-sm13-latest's lines.json names (its git tag is not moved with the release).
       - name: Build matrix
         id: matrix
         run: |
-          python3 - >>"$GITHUB_OUTPUT" <<'EOF'
-          import json
-          b = [x for x in json.load(open('testing/compat/sm-builds.json'))['builds'] if 'local' not in x]
-          print('builds=' + json.dumps([{'id': x['id'], 'label': x['label'],
-              'mm_url': x['mm']['url'], 'mm_sha': x['mm']['sha256'],
-              'sm_url': x['sm']['url'], 'sm_sha': x['sm']['sha256']} for x in b]))
-          EOF
+          echo "builds=$(python3 testing/scripts/compat-builds.py testing/compat/sm-builds.json --ci)" >>"$GITHUB_OUTPUT"
+          eval "$(python3 builder/run/css34_line.py --urls sm13 .ci-css34)"
+          echo "harness=${CSS34_TAG}" >>"$GITHUB_OUTPUT"
 
       - name: Fetch CSS:DM packages
         env:
@@ -98,7 +94,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fmu1337/sourcemod-css34
-          ref: ${{ env.HARNESS_REF }}
+          ref: ${{ needs.setup.outputs.harness }}
           path: .ci-vendor/sourcemod-css34
 
       - name: Install host 32-bit runtime + tools
