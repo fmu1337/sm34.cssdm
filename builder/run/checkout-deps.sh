@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Fetch hl2sdk-episode1, Metamod:Source, SourceMod sources and a SourceMod package
 # (for spcomp) into DEPS_DIR for the CSSDM_SM_LINE build.
-#   sm11: SM/MM 1.10-dev sources (1.ep1 + 2.ep1); spcomp and includes from the fork's
-#         line-sm11-oldstable package (SM 1.11.0.6970), whose cstrike.inc matches upstream cssdm.
+#   sm11: SM/MM 1.10-dev sources (1.ep1 + 2.ep1); spcomp from rom4s SM 1.11.0.6572, whose
+#         plugins still load on rom4s SM 1.10/1.11 (newer spcomp output does not).
 #   sm12, sm13: whatever fmu1337/sourcemod-css34 line-sm12-latest / line-sm13-latest point at:
 #         its SourceMod / Metamod commits and its SourceMod package (2.ep1 only); see css34_line.py.
 set -euo pipefail
@@ -27,8 +27,8 @@ case "${CSSDM_SM_LINE}" in
   sm11)
     git clone --depth 1 -b 1.10-dev https://github.com/alliedmodders/metamod-source "${DEPS_DIR}/mmsource"
     git clone --depth 1 -b 1.10-dev --recursive https://github.com/alliedmodders/sourcemod "${DEPS_DIR}/sourcemod"
-    eval "$(python3 "$(dirname "$0")/css34_line.py" sm11 "${TMP}/css34" sourcemod)"
-    mv "${CSS34_SOURCEMOD}" "${TMP}/sm-bin.tgz"
+    curl -fL --retry 5 -o "${TMP}/sm-bin.tgz" \
+      https://github.com/rom4s/sourcemod-css34/releases/download/v1.11.0.6572/sourcemod-1.11.0-git6572-css34-linux.tar.gz
     ;;
   sm12|sm13)
     eval "$(python3 "$(dirname "$0")/css34_line.py" "${CSSDM_SM_LINE}" "${TMP}/css34" sourcemod)"

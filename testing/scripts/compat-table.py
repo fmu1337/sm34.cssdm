@@ -69,7 +69,7 @@ def parse(args):
 
     plugins = section(text, 'COMPAT_PLUGINS_BEGIN', 'COMPAT_LISTS_END')
     r['dm_running'] = len(re.findall(r'^\s*\d+ "CS:S DM', plugins, re.M))
-    r['dm_failed'] = len(re.findall(r'<(?:Failed|Error)> "CS:S DM', plugins))
+    r['dm_failed'] = len(re.findall(r'<(?:Failed|Error|Bad Load)> (?:"CS:S DM|cssdm/)', plugins))
     errs = re.findall(r'cssdm/(\w+)\.smx[^:\n]*: ([^\n]+)', plugins)
     r['dm_errors'] = sorted(set(e for _, e in errs))[:3]
 

@@ -178,7 +178,8 @@ if grep -Eiq '<FAILED> file "cssdm\.ext|cssdm\.ext.*<FAILED>|cssdm\.ext.*error|U
     echo "WARN: cssdm.ext failed to load (CSSDM_REQUIRE_EXT_LOAD=0)" >&2
   fi
 fi
-if grep -Eiq 'dm_basics.*<Failed>|dm_equipment.*<Failed>|<Failed> "CS:S DM' "${CONSOLE_PROBE_LOG}"; then
+# A plugin SM could not even load shows as "<Bad Load> cssdm/dm_basics.smx" (no display name).
+if grep -Eiq 'dm_basics.*<Failed>|dm_equipment.*<Failed>|<(Failed|Error|Bad Load)> ("CS:S DM|cssdm/)' "${CONSOLE_PROBE_LOG}"; then
   if [[ "${CSSDM_REQUIRE_EXT_LOAD}" == "1" ]]; then
     echo "FAIL: CSS:DM plugin failed" >&2
     fail=1
