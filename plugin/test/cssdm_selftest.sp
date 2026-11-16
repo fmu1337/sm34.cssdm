@@ -239,7 +239,7 @@ float Step(int step)
 		{
 			Check("respawn_after_wait", IsPlayerAlive(a));
 			Check("respawn_forwards", g_Spawns[a] == 1 && g_PostSpawns[a] == 1, "spawned=%d post=%d", g_Spawns[a], g_PostSpawns[a]);
-			return 1.2;
+			return 3.0; /* past dm_spawn_protection (cssdm_prot_time 2) before the next kill */
 		}
 		case 5:
 		{
