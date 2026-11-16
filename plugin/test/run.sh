@@ -44,9 +44,11 @@ if [[ "${MODE}" == "plugin" ]]; then
   git -C "${ROOT}/cssdm" checkout -q -- .
   git -C "${ROOT}/cssdm" apply --ignore-space-change --ignore-whitespace "${ROOT}/builder/patches/2.1/2.patch"
   INC="${ROOT}/plugin/scripting/include"
-  "${SPCOMP}" -i"${SM}/scripting/include" -i"${INC}" "${ROOT}/plugin/scripting/cssdm.sp" -o"${SM}/plugins/cssdm.smx"
+  # The package also ships the extension's cssdm.inc in scripting/include; ours must win.
+  cp -f "${INC}/cssdm.inc" "${SM}/scripting/include/cssdm.inc"
+  "${SPCOMP}" -i"${INC}" -i"${SM}/scripting/include" "${ROOT}/plugin/scripting/cssdm.sp" -o"${SM}/plugins/cssdm.smx"
   for f in "${ROOT}"/cssdm/scripting/dm_*.sp; do
-    "${SPCOMP}" -i"${SM}/scripting/include" -i"${INC}" "${f}" -o"${SM}/plugins/cssdm/$(basename "${f}" .sp).smx"
+    "${SPCOMP}" -i"${INC}" -i"${SM}/scripting/include" "${f}" -o"${SM}/plugins/cssdm/$(basename "${f}" .sp).smx"
   done
   cp -f "${ROOT}/builder/patches/2.1/gamedata/cssdm.games.txt" "${SM}/gamedata/"
   git -C "${ROOT}/cssdm" checkout -q -- .
@@ -55,7 +57,7 @@ if [[ "${MODE}" == "plugin" ]]; then
     "${H}/check-css34-vtables.py" | tee "${OUT_DIR}/inspect-server.txt" || echo "inspect-server: FAIL"
 fi
 
-"${SPCOMP}" -i"${SM}/scripting/include" -i"${INC}" "${ROOT}/plugin/test/cssdm_selftest.sp" -o"${SM}/plugins/cssdm_selftest.smx"
+"${SPCOMP}" -i"${INC}" -i"${SM}/scripting/include" "${ROOT}/plugin/test/cssdm_selftest.sp" -o"${SM}/plugins/cssdm_selftest.smx"
 cp -f "${ROOT}/plugin/test/cssdm_selftest.games.txt" "${SM}/gamedata/"
 
 cd "${SERVER_DIR}"
