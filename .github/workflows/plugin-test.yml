@@ -1,0 +1,95 @@
+name: Plugin Test
+
+# cssdm.smx (plugin/) against the released cssdm.ext: the same selftest on both,
+# then the RESULT lines are compared.
+on:
+  pull_request:
+    paths:
+      - 'plugin/**'
+      - 'builder/patches/2.1/gamedata/**'
+      - '.github/workflows/plugin-test.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: plugin-test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CSSDM_RELEASE: v2.1.6-git325
+
+jobs:
+  selftest:
+    name: selftest (${{ matrix.mode }}, ${{ matrix.line }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [ext, plugin]
+        line: [sm11, sm13]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Resolve harness tag
+        id: harness
+        run: |
+          eval "$(python3 builder/run/css34_line.py sm13 .ci-css34-harness)"
+          echo "ref=${CSS34_TAG}" >>"$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: fmu1337/sourcemod-css34
+          ref: ${{ steps.harness.outputs.ref }}
+          path: .ci-vendor/sourcemod-css34
+
+      - name: Install 32-bit runtime
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y binutils curl unzip unrar \
+            lib32gcc-s1 lib32stdc++6 lib32z1 libc6-i386 libstdc++6:i386 zlib1g:i386
+
+      - name: Download released CSS:DM
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${{ matrix.line }}" == "sm13" ]]; then pat='cssdm-*-css34-sm13-linux.tar.gz'; else pat='cssdm-*-css34-linux.tar.gz'; fi
+          gh release download "${CSSDM_RELEASE}" -R "${{ github.repository }}" -p "${pat}" -D packages
+          ls -la packages
+
+      - name: Selftest
+        env:
+          MODE: ${{ matrix.mode }}
+          CSSDM_SM_LINE: ${{ matrix.line }}
+          SM_CSS34_ROOT: ${{ github.workspace }}/.ci-vendor/sourcemod-css34
+        run: |
+          chmod +x plugin/test/run.sh testing/scripts/*.sh .ci-vendor/sourcemod-css34/testing/scripts/*.sh
+          CSSDM_PACKAGE="$(ls packages/*.tar.gz | head -n1)" plugin/test/run.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selftest-${{ matrix.mode }}-${{ matrix.line }}
+          path: .ci-out/
+          if-no-files-found: ignore
+
+  compare:
+    needs: selftest
+    if: always()
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - name: Compare ext vs plugin
+        run: |
+          rc=0
+          for line in sm11 sm13; do
+            echo "== ${line}"
+            for m in ext plugin; do
+              grep '^RESULT' "out/selftest-${m}-${line}/selftest.txt" | awk '{print $2, $3}' >"${m}.txt" || true
+            done
+            if diff -u ext.txt plugin.txt; then echo "identical"; else rc=1; fi
+          done
+          exit ${rc}

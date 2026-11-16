@@ -6,3 +6,5 @@
 /.ci-vendor/
 *.log
 __pycache__/
+/.ci-out/
+/.ci-css34-harness/
