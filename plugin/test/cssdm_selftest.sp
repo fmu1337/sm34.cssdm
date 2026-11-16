@@ -29,19 +29,17 @@ int g_PostSpawns[MAXPLAYERS + 1];
 int g_Startups, g_Shutdowns, g_SpawnMethodCalls;
 char g_SpawnMethodArg[64];
 int g_BlockClient;
-int g_JoinClassSeen;
 
 /* memory sites */
 Address g_LagComp, g_TakeDmg, g_Points;
 char g_BytesOff[256];
 
-int g_HealthBefore, g_FragsBefore;
+int g_FragsBefore;
 
 public void OnPluginStart()
 {
 	BuildPath(Path_SM, g_Log, sizeof(g_Log), "logs/cssdm_selftest.log");
 	DeleteFile(g_Log);
-	AddCommandListener(Listener_JoinClass, "joinclass");
 }
 
 void Out(const char[] fmt, any ...)
@@ -77,12 +75,6 @@ public Action DM_OnSetSpawnMethod(const char[] method)
 {
 	g_SpawnMethodCalls++;
 	strcopy(g_SpawnMethodArg, sizeof(g_SpawnMethodArg), method);
-	return Plugin_Continue;
-}
-
-Action Listener_JoinClass(int client, const char[] command, int argc)
-{
-	g_JoinClassSeen++;
 	return Plugin_Continue;
 }
 
@@ -124,6 +116,15 @@ int CountRagdolls()
 		n++;
 	}
 	return n;
+}
+
+/* Health lost by an unarmoured victim. */
+int TeamDamage(int victim, int attacker, float amount)
+{
+	SetEntProp(victim, Prop_Send, "m_ArmorValue", 0);
+	SetEntityHealth(victim, 100);
+	Damage(victim, attacker, amount);
+	return 100 - GetClientHealth(victim);
 }
 
 void Damage(int victim, int attacker, float amount)
@@ -246,12 +247,14 @@ float Step(int step)
 
 			/* DM_OnClientDeath returning Plugin_Handled: no respawn */
 			g_BlockClient = a;
+			g_Deaths[a] = 0;
+			g_Spawns[a] = 0;
 			ForcePlayerSuicide(a);
 			return 2.5;
 		}
 		case 6:
 		{
-			Check("death_blocked_no_respawn", !IsPlayerAlive(a));
+			Check("death_blocked_no_respawn", !IsPlayerAlive(a), "OnClientDeath=%d spawned_forward=%d", g_Deaths[a], g_Spawns[a]);
 			g_BlockClient = 0;
 			g_Spawns[a] = 0;
 			DM_RespawnClient(a);
@@ -260,22 +263,22 @@ float Step(int step)
 		}
 		case 7:
 		{
-			/* FFA off: teammate damage blocked, teamkill = -1 frag */
-			g_HealthBefore = GetClientHealth(c);
-			Damage(c, b, 10.0);
-			Check("ffa_off_team_damage_blocked", GetClientHealth(c) == g_HealthBefore, "hp %d -> %d", g_HealthBefore, GetClientHealth(c));
-
+			/* FFA needs mp_friendlyfire 1 (cssdm.cfg: "without any damage reduction or
+			 * teamkill penalties"). FFA off: teammate damage reduced, teamkill = -1 frag. */
 			ServerCommand("mp_friendlyfire 1");
 			return 0.5;
 		}
 		case 8:
 		{
+			int dmg = TeamDamage(c, b, 10.0);
+			Check("ffa_off_team_damage_reduced", dmg > 0 && dmg < 10, "10 dmg -> %d", dmg);
+
 			g_FragsBefore = GetClientFrags(b);
 			Damage(c, b, 500.0);
 			Check("ffa_off_teamkill_minus_one", !IsPlayerAlive(c) && GetClientFrags(b) - g_FragsBefore == -1,
 				"alive=%d frags %d -> %d", IsPlayerAlive(c), g_FragsBefore, GetClientFrags(b));
-			ServerCommand("mp_friendlyfire 0; cssdm_ffa_enabled 1");
-			return 5.0; /* c respawns, protection ends */
+			ServerCommand("cssdm_ffa_enabled 1");
+			return 5.0; /* c respawns, spawn protection (2 s) ends */
 		}
 		case 9:
 		{
@@ -283,9 +286,8 @@ float Step(int step)
 			Out("INFO bytes_ffa_on %s", buf);
 			Check("ffa_on_bytes_changed", !StrEqual(buf, g_BytesOff));
 
-			g_HealthBefore = GetClientHealth(c);
-			Damage(c, b, 10.0);
-			Check("ffa_on_team_damage", IsPlayerAlive(c) && GetClientHealth(c) < g_HealthBefore, "hp %d -> %d", g_HealthBefore, GetClientHealth(c));
+			int dmg = TeamDamage(c, b, 10.0);
+			Check("ffa_on_team_damage_full", dmg == 10, "10 dmg -> %d", dmg);
 
 			g_FragsBefore = GetClientFrags(b);
 			Damage(c, b, 500.0);
@@ -297,7 +299,7 @@ float Step(int step)
 			Damage(b, g_CT, 500.0);
 			Check("ffa_on_enemy_kill_plus_one", GetClientFrags(g_CT) - g_FragsBefore == 1, "frags %d -> %d", g_FragsBefore, GetClientFrags(g_CT));
 
-			ServerCommand("cssdm_ffa_enabled 0");
+			ServerCommand("cssdm_ffa_enabled 0; mp_friendlyfire 0");
 			return 0.5;
 		}
 		case 10:
@@ -351,13 +353,6 @@ float Step(int step)
 			Check("spawn_method_forward", g_SpawnMethodCalls == 1 && StrEqual(g_SpawnMethodArg, "random"),
 				"calls=%d arg=%s", g_SpawnMethodCalls, g_SpawnMethodArg);
 			ServerCommand("cssdm_spawn_method preset");
-
-			FakeClientCommandEx(a, "joinclass 1");
-			return 0.5;
-		}
-		case 14:
-		{
-			Out("INFO joinclass_listener_seen=%d (FakeClientCommand)", g_JoinClassSeen);
 			return Finish();
 		}
 	}
