@@ -89,7 +89,9 @@ jobs:
           for line in sm11 sm13; do
             echo "== ${line}"
             for m in ext plugin; do
-              grep '^RESULT' "out/selftest-${m}-${line}/selftest.txt" | awk '{print $2, $3}' >"${m}.txt" || true
+              f="out/selftest-${m}-${line}/selftest.txt"
+              if [[ ! -s "${f}" ]]; then echo "missing ${f}"; rc=1; continue 2; fi
+              grep '^RESULT' "${f}" | awk '{print $2, $3}' >"${m}.txt"
             done
             if diff -u ext.txt plugin.txt; then echo "identical"; else rc=1; fi
           done

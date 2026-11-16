@@ -103,6 +103,12 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
+	/* Both would patch FFA, and the second one would save the first one's bytes as "original". */
+	if (GetExtensionFileStatus("cssdm.ext") == 1)
+	{
+		SetFailState("cssdm.ext is loaded: remove addons/sourcemod/extensions/cssdm.ext*.so");
+	}
+
 	g_Conf = new GameData("cssdm.games");
 	if (g_Conf == null)
 	{

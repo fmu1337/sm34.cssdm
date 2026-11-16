@@ -36,7 +36,11 @@ INC="${ROOT}/cssdm/scripting/include"
 if [[ "${MODE}" == "plugin" ]]; then
   # Replace the extension with the plugin; the DM plugins are rebuilt against the
   # plugin's cssdm.inc (SharedPlugin instead of Extension).
-  rm -f "${SM}/extensions/cssdm.ext.so" "${SM}/extensions/cssdm.autoload"
+  # The package ships cssdm.ext.1.ep1.so / cssdm.ext.2.ep1.so (one per Metamod API).
+  rm -f "${SM}"/extensions/cssdm.ext*.so "${SM}/extensions/cssdm.autoload"
+  if ls "${SM}"/extensions/cssdm* >/dev/null 2>&1; then
+    echo "cssdm extension files still present:"; ls "${SM}"/extensions/cssdm*; exit 1
+  fi
   git -C "${ROOT}/cssdm" checkout -q -- .
   git -C "${ROOT}/cssdm" apply --ignore-space-change --ignore-whitespace "${ROOT}/builder/patches/2.1/2.patch"
   INC="${ROOT}/plugin/scripting/include"
