@@ -66,7 +66,9 @@ for table, slot, want in [('_ZTV12CCSGameRules', 64, 'IPointsForKill'),
     size = syms.get(name, (0, 0))[1]
     print('  %s %s[%d] = %s (%d bytes)' % ('OK  ' if ok else 'FAIL', table, slot, dem, size))
     if want == 'IPointsForKill':
-        points = name
+        # load_vtables returns demangled names; find the mangled symbol.
+        cls = dem.split('::')[0]
+        points = next(s for s in syms if s.startswith('_ZN%d%s14IPointsForKill' % (len(cls), cls)))
         # neighbours, to see the slot is not off by one
         for s in (slot - 1, slot + 1):
             print('       [%d] = %s' % (s, demangle(tables[table][s])))

@@ -60,10 +60,8 @@ BIN=./srcds_i686
 [[ -x "${BIN}" ]] || BIN=./srcds_i486
 rm -f "${SM}"/logs/*.log
 echo "Starting srcds (${MODE}, ${CSSDM_SM_LINE})"
-# stdin stays open (tail) so the -console reader does not spin on EOF; the selftest quits the server.
 set +e
-timeout 300 bash -c "tail -f /dev/null | ${BIN} -game cstrike -console -nohltv -ip 127.0.0.1 -port 27015 \
-  +sv_lan 1 +maxplayers 12 +map de_dust2" >"${OUT_DIR}/srcds.log" 2>&1
+"${ROOT}/plugin/test/run-srcds.exp" "${BIN}" de_dust2 >"${OUT_DIR}/srcds.log" 2>&1
 rc=$?
 set -e
 echo "srcds exit ${rc}"
@@ -76,4 +74,4 @@ if [[ ! -f "${SM}/logs/cssdm_selftest.log" ]]; then
   echo "no selftest log"; tail -n 80 "${OUT_DIR}/srcds.log"; exit 1
 fi
 sed 's/^L [^:]*:[^:]*:[^:]*: //' "${SM}/logs/cssdm_selftest.log" | tee "${OUT_DIR}/selftest.txt"
-grep -q '^SUMMARY fails=0' "${OUT_DIR}/selftest.txt"
+grep -q "^SUMMARY fails=0" "${OUT_DIR}/selftest.txt" || { tail -n 60 "${OUT_DIR}/srcds.log"; exit 1; }
