@@ -1,0 +1,50 @@
+"Games"
+{
+	"cstrike"
+	{
+		"Offsets"
+		{
+			"LagCompPatch"
+			{
+				"linux"	"62"
+			}
+			"TakeDmgPatch1"
+			{
+				"linux"	"1547"
+			}
+			"IPointsForKill"
+			{
+				"linux"	"64"
+			}
+		}
+		"Addresses"
+		{
+			"GameRules"
+			{
+				"linux"
+				{
+					"signature"	"CGameRules"
+					"read"		"0"
+				}
+			}
+		}
+		"Signatures"
+		{
+			"CGameRules"
+			{
+				"library"	"server"
+				"linux"		"@g_pGameRules"
+			}
+			"OnTakeDamage"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9CCSPlayer12OnTakeDamageERK15CTakeDamageInfo"
+			}
+			"WantsLagComp"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK11CBasePlayer28WantsLagCompensationOnEntityEPKS_PK8CUserCmdPK7CBitVecILi2048EE"
+			}
+		}
+	}
+}

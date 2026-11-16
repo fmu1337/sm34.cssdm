@@ -71,6 +71,18 @@
 				"linux"			"10"
 			}
 		}
+		/* cssdm.smx: the gamerules object (*g_pGameRules), for the FFA IPointsForKill patch. */
+		"Addresses"
+		{
+			"GameRules"
+			{
+				"linux"
+				{
+					"signature"	"CGameRules"
+					"read"		"0"
+				}
+			}
+		}
 		"Signatures"
 		{
 			"UTIL_Remove"

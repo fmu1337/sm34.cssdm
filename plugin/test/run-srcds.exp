@@ -1,0 +1,11 @@
+#!/usr/bin/expect -f
+# Run srcds under a pty (like sourcemod-css34's console-probe.exp) until it quits.
+#   run-srcds.exp <binary> <map>   (cwd: server dir, LD_LIBRARY_PATH set)
+set timeout 300
+log_user 1
+spawn [lindex $argv 0] -game cstrike -console -nohltv -nomaster -localcser -tickrate 66 \
+    -ip 127.0.0.1 -port 27015 +ip 127.0.0.1 +sv_lan 1 +maxplayers 12 +map [lindex $argv 1]
+expect {
+    eof { exit 0 }
+    timeout { puts stderr "srcds timeout"; exit 124 }
+}
