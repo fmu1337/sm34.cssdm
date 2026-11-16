@@ -137,6 +137,7 @@ public void OnMapStart()
 	if (g_Step == 0)
 	{
 		CreateTimer(5.0, Timer_Step, _, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(150.0, Timer_Watchdog);
 	}
 }
 
@@ -153,7 +154,13 @@ Action Timer_Step(Handle timer)
 float Step(int step)
 {
 	char buf[256], buf2[256];
-	int a = g_T[0], b = g_T[1], c = g_T[2];
+	int a, b, c;
+	if (step > 2)
+	{
+		a = g_T[0];
+		b = g_T[1];
+		c = g_T[2];
+	}
 
 	switch (step)
 	{
@@ -190,6 +197,9 @@ float Step(int step)
 				return Finish();
 			}
 
+			a = g_T[0];
+			b = g_T[1];
+			c = g_T[2];
 			Check("native_IsRunning", DM_IsRunning());
 			int id = DM_GetWeaponID("ak47");
 			Check("native_GetWeaponID", id >= 0, "ak47=%d unknown=%d", id, DM_GetWeaponID("nope"));
@@ -352,6 +362,13 @@ float Step(int step)
 		}
 	}
 	return 0.0;
+}
+
+Action Timer_Watchdog(Handle timer)
+{
+	Check("watchdog", false, "selftest stuck at step %d", g_Step);
+	Finish();
+	return Plugin_Stop;
 }
 
 float Finish()
